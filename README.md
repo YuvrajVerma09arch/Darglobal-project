@@ -255,11 +255,12 @@ Use `./scripts/docker` if the Docker CLI is not on `PATH`. See `docs/DEPLOYMENT.
 
 ## 11. Deployment
 
-`render.yaml` defines a Blueprint with managed Postgres, a backend Docker web
-service (`/health` check) and a frontend Docker web service. The assignment owner
-deploys from their own Render dashboard because no Render credentials were
-shared. Exact click-by-click steps, env vars, ingestion and external verification
-are in `docs/DEPLOYMENT.md`.
+`render.yaml` is a **backend-only** Blueprint (FastAPI web service). The database
+is an external pgvector-capable **Neon** Postgres — see `docs/NEON_SETUP.md` for
+the exact setup — and the frontend is deployed on **Vercel** via `vercel.json`.
+The assignment owner deploys from their own accounts because no credentials were
+shared. Steps, env vars, ingestion and external verification are in
+`docs/DEPLOYMENT.md`.
 
 > **Public URL:** pending the user-side Render deployment. Do not treat the app as
 > deployed until the smoke tests in `docs/DEPLOYMENT.md` pass from an external network.

@@ -106,6 +106,11 @@ docker compose up -d           # data comes back
 
 ## 2. Render manual deployment (click-by-click)
 
+> The current Blueprint creates **only the backend**. Set up Neon first using
+> `docs/NEON_SETUP.md`, then paste the converted `postgresql+asyncpg://...`
+> string as `DATABASE_URL` when the Blueprint prompts for it. The frontend goes
+> to Vercel (section 2b), not Render.
+
 ### Step 1 — publish the repo
 
 Create a remote on GitHub/GitLab/Bitbucket and push every file, including

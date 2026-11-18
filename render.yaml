@@ -1,33 +1,20 @@
 # ---------------------------------------------------------------------------
-# Render Blueprint — DarGlobal & Wasalt Real Estate Intelligence Assistant
+# Render Blueprint — BACKEND ONLY
 #
-# Deploy manually from the Render dashboard: New > Blueprint > connect the
-# repository. The final public URLs are created in YOUR Render account and
-# follow the service names below (e.g. darglobal-wasalt-backend.onrender.com).
+# This Blueprint intentionally creates ONLY the FastAPI backend web service.
+# The database is an external pgvector-capable Neon Postgres (see
+# docs/NEON_SETUP.md), and the frontend is deployed on Vercel (vercel.json).
+# Do not add a Render `databases:` block here — Render Postgres may not expose
+# the `vector` extension required by pgvector.
 #
-# IMPORTANT — pgvector:
-#   The backend runs `CREATE EXTENSION IF NOT EXISTS vector` on startup, so the
-#   database user must be permitted to create extensions. Render's managed
-#   Postgres does not always allow this. If startup fails with
-#   "extension \"vector\" is not available" / "must be superuser", use an
-#   external pgvector-capable Postgres instead (Neon's free tier works well)
-#   and paste its connection string into DATABASE_URL (see notes below).
-#   The bundled `db` service in docker-compose.yml uses pgvector/pgvector:pg16,
-#   so local development always has the extension.
+# Deploy: Render dashboard > New > Blueprint > connect the repo. You will be
+# prompted for the sync:false secret values (DATABASE_URL, keys, access code).
 #
 # IMPORTANT — DATABASE_URL scheme:
-#   Render-copyable connection strings start with `postgres://`. The app uses
-#   SQLAlchemy's asyncpg driver and requires `postgresql+asyncpg://`. Change
-#   the scheme before pasting the value into the DATABASE_URL env var below.
-#   URL-encode any special characters in the password (e.g. @ -> %40).
+#   Neon connection strings start with `postgresql://`. The app uses SQLAlchemy's
+#   asyncpg driver and requires `postgresql+asyncpg://`. Change only the scheme.
+#   URL-encode special characters in the password (e.g. @ -> %40).
 # ---------------------------------------------------------------------------
-
-databases:
-  - name: realestate-ai-db
-    databaseName: realestate_ai
-    user: darglobal
-    plan: free # Free Postgres expires after 30 days — upgrade before production.
-    region: oregon
 
 services:
   # ------------------------------- Backend ---------------------------------
