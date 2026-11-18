@@ -236,6 +236,7 @@ Render routes to the right container port.
 | `POSTGRES_PORT` | `5432` | from DB / `.env` | |
 | `DATABASE_URL` | `postgresql+asyncpg://...@db:5432/...` | your external/Neon URL | **secret**; overrides all `POSTGRES_*` |
 | `ADMIN_API_KEY` | generated | **secret** (dashboard) | `X-Admin-Key` header |
+| `APP_ACCESS_CODE` | empty / your code | **secret** (dashboard) | If set, public chat requires `X-Access-Code`; UI shows a gate |
 | `RATE_LIMIT_PER_MINUTE` | `30` | `30` | |
 | `CHAT_RATE_LIMIT_PER_MINUTE` | `12` | `12` | |
 | `EMBEDDING_PROVIDER` | `local` | `local` | `local` = fastembed, no key |

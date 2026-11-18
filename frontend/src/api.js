@@ -6,6 +6,27 @@
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
+// Shared access code, kept in memory only (never localStorage/sessionStorage).
+let accessCode = '';
+export const setAccessCode = (code) => { accessCode = code || ''; };
+const withAccess = () => (accessCode ? { 'X-Access-Code': accessCode } : {});
+
+/** Public probe: does this deployment require an access code? */
+export async function fetchAccessRequirement(signal) {
+  const response = await fetch(`${API_BASE}/api/v1/access`, { signal });
+  if (!response.ok) throw new Error('Could not read access requirements');
+  return response.json();
+}
+
+/** Verify a code against a lightweight gated endpoint and remember it in memory. */
+export async function unlockWithCode(code) {
+  const response = await fetch(`${API_BASE}/api/v1/properties?limit=1`, {
+    headers: { 'X-Access-Code': code },
+  });
+  if (!response.ok) throw new Error('That access code was not accepted.');
+  accessCode = code;
+}
+
 /** Convert UI filter state into the JSON shape expected by /api/v1/chat. */
 export function normalizeFilters(filters = {}) {
   const normalized = {};
@@ -73,6 +94,7 @@ export async function streamChat(request, handlers = {}) {
     headers: {
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
+      ...withAccess(),
     },
     body: JSON.stringify(body),
     signal,

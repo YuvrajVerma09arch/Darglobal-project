@@ -14,6 +14,15 @@ from app.schemas import SourcesResponse, SourceStat, StatsResponse
 
 router = APIRouter(prefix="/sources", tags=["metadata"])
 stats_router = APIRouter(tags=["metadata"])
+access_router = APIRouter(tags=["metadata"])
+
+
+@access_router.get("/access")
+async def access_requirement():
+    """Public: tells the UI whether a shared access code is required."""
+    from app.config import get_settings
+
+    return {"access_required": bool(get_settings().app_access_code.strip())}
 
 
 @router.get("", response_model=SourcesResponse)

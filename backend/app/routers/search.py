@@ -5,12 +5,13 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps import require_access_code
 from app.db import get_db
 from app.schemas import SearchRequest, SearchResponse, SearchResult
 from app.services.embeddings import embedding_service
 from app.services.retrieval import HybridRetriever
 
-router = APIRouter(prefix="/search", tags=["search"])
+router = APIRouter(prefix="/search", tags=["search"], dependencies=[Depends(require_access_code)])
 retriever = HybridRetriever()
 
 

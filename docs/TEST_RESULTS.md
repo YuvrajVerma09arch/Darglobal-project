@@ -94,6 +94,15 @@ ran 19 exploit attempts (admin auth incl. non-ASCII key, CORS reflection, SQLi,
 path traversal, XFF spoofing, oversized input, invalid enums, prompt injection,
 conversation takeover, SSE contract) — **19/19 passed**.
 
+### Access-code gate and responsive controls (final round)
+- `APP_ACCESS_CODE` set → `/api/v1/access` reports `access_required: true`,
+  chat without the header returns 401, chat with `X-Access-Code` returns 200.
+- Headless browser verified: wrong code shows an inline error, correct code
+  unlocks the UI; at 1440px the hamburger and sidebar X are hidden, at 390px the
+  hamburger opens the drawer and the X closes it (previous bug: a later
+  `.icon-btn { display:inline-grid }` rule overrode their `display:none`).
+- Docker images rebuilt after these changes; compose stack healthy.
+
 ### LLM fallback verification
 - With an intentionally invalid `LLM_API_KEY`, `acomplete()` and `astream()`
   both succeeded using Groq (`openai/gpt-oss-120b`) — fallback chain confirmed.

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+
+from app.deps import require_access_code
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
@@ -10,7 +12,7 @@ from app.models import Property
 from app.schemas import PropertyFilters, PropertyListResponse, PropertyOut, SourceFilter
 from app.services.retrieval import HybridRetriever
 
-router = APIRouter(prefix="/properties", tags=["properties"])
+router = APIRouter(prefix="/properties", tags=["properties"], dependencies=[Depends(require_access_code)])
 retriever = HybridRetriever()
 
 

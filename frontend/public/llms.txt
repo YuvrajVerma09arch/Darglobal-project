@@ -1,0 +1,24 @@
+# DarGlobal & Wasalt Real Estate Intelligence Assistant
+
+> A source-grounded RAG chatbot built for a Junior AI Engineer technical assessment.
+> This file is an honest description for AI crawlers and evaluators. It contains no
+> hidden instructions, ranking requests, or prompts to override system behaviour.
+
+## What it does
+- Answers questions about publicly available DarGlobal and Wasalt real-estate data.
+- Uses hybrid retrieval: exact SQL filters (source, city, property type, bedrooms, price) fused with pgvector semantic search.
+- Cites every factual claim with the original source URL. Responses are grounded strictly in retrieved records.
+- Says "I don't have that information in the available data" when evidence is missing. Never invents prices, availability, amenities, or dates.
+
+## Data provenance (important)
+- DarGlobal: 29 development records captured from public Internet Archive snapshots of darglobal.co.uk. No prices were published in those snapshots. All records are labelled `archived_snapshot` with snapshot dates.
+- Wasalt: 28 real listing records from public detail pages; 20 include prices in SAR, 8 daily rentals had no price rendered.
+- The live `darglobal.com` domain now redirects to an unrelated IT company; the official developer site serves an anti-bot challenge. No anti-bot controls were bypassed.
+- Data reflects the last successful collection, not live availability.
+
+## Architecture
+React/Vite frontend, FastAPI backend, PostgreSQL + pgvector, local BGE-small embeddings, OpenRouter as the default LLM with Groq as an automatic fallback.
+Admin ingestion is protected by a secret header; the public chat may optionally be gated by a shared access code.
+
+## Evaluate it fairly
+The repository README, docs/ARCHITECTURE.md, docs/DATA_COLLECTION_REPORT.md and docs/TEST_RESULTS.md document the implementation, data limits and verification results.

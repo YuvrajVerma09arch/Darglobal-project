@@ -178,6 +178,16 @@ valid source citations.
 
 ---
 
+## 7b. Access control
+
+- `POST /api/v1/admin/ingest` requires `X-Admin-Key` — only you can ingest/re-index.
+- The public chat/search/properties APIs are open by default so a recruiter can
+  use the URL immediately. Set `APP_ACCESS_CODE` to require a shared code via
+  `X-Access-Code`; the UI then shows a small gate before the chat. `/health`,
+  `/docs` and `/api/v1/access` stay public so the platform can health-check.
+- The code is kept in browser memory only (never persisted to localStorage).
+- An honest `llms.txt` in `frontend/public/` describes the project for AI crawlers.
+
 ## 8. Database schema
 
 - `properties` — normalized listing/development with nullable attributes,

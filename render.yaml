@@ -64,6 +64,11 @@ services:
       - key: ADMIN_API_KEY
         sync: false
 
+      # Optional: set to a shared code if only the assessment owner should
+      # chat. Leave unset for an open public demo.
+      - key: APP_ACCESS_CODE
+        sync: false
+
       # Must match the FRONTEND origin exactly (Vercel in the chosen topology).
       # Replace this placeholder with the real Vercel URL before the first chat.
       - key: ALLOWED_ORIGINS

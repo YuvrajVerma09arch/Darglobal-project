@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { fetchAccessRequirement, unlockWithCode } from './api.js';
+import AccessGate from './components/AccessGate.jsx';
 import useChat from './hooks/useChat.js';
 import ChatHeader from './components/ChatHeader.jsx';
 import Composer from './components/Composer.jsx';
@@ -11,6 +13,34 @@ export default function App() {
   const chat = useChat();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [access, setAccess] = useState({ ready: false, required: false, unlocked: false });
+
+  useEffect(() => {
+    let alive = true;
+    fetchAccessRequirement()
+      .then((data) => {
+        if (!alive) return;
+        const required = Boolean(data?.access_required);
+        setAccess({ ready: true, required, unlocked: !required });
+      })
+      .catch(() => {
+        // If the probe fails, let the app load and surface its own error states.
+        if (alive) setAccess({ ready: true, required: false, unlocked: true });
+      });
+    return () => { alive = false; };
+  }, []);
+
+  const handleUnlock = async (code) => {
+    await unlockWithCode(code);
+    setAccess({ ready: true, required: true, unlocked: true });
+  };
+
+  if (!access.ready) {
+    return <div className="app-loading" role="status">Loading…</div>;
+  }
+  if (access.required && !access.unlocked) {
+    return <AccessGate onUnlock={handleUnlock} />;
+  }
 
   const openExample = (question) => {
     chat.handleSend(question);

@@ -6,11 +6,12 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deps import require_access_code
 from app.db import get_db
 from app.schemas import ChatRequest, ChatResponse
 from app.services.rag import rag_service
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(require_access_code)])
 
 
 @router.post("", response_model=ChatResponse)

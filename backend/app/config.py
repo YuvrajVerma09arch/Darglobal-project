@@ -35,6 +35,8 @@ class Settings(BaseSettings):
 
     # Auth / abuse controls
     admin_api_key: str = "replace-with-a-long-random-value"
+    # Optional shared access code for the public chat UI. Empty = open access.
+    app_access_code: str = ""
     rate_limit_per_minute: int = 30
     chat_rate_limit_per_minute: int = 12
 

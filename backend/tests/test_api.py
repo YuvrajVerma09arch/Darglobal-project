@@ -89,6 +89,22 @@ def test_cors_allows_configured_origin():
         assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
 
+def test_access_gate_when_code_configured(monkeypatch):
+    from app.deps import settings as deps_settings
+
+    monkeypatch.setattr(deps_settings, "app_access_code", "secret-code")
+    with client() as http:
+        assert http.get("/api/v1/access").json()["access_required"] is True
+        assert http.post("/api/v1/chat", json={"message": "hi"}).status_code == 401
+        ok = http.post(
+            "/api/v1/chat",
+            json={"message": "hi"},
+            headers={"X-Access-Code": "secret-code"},
+        )
+        # 200 (retrieval path) or 503 (no DB) — both prove the dependency passed.
+        assert ok.status_code in {200, 503}
+
+
 def test_unknown_endpoint_returns_404():
     with client() as http:
         assert http.get("/api/v1/does-not-exist").status_code == 404
