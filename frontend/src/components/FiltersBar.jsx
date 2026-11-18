@@ -1,0 +1,77 @@
+import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+
+export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFilterChange, isOpen, onToggle }) {
+  const setField = (key) => (event) => onFilterChange(key, event.target.value);
+
+  return (
+    <section className={`filters-bar ${isOpen ? 'is-open' : ''}`} aria-label="Search filters">
+      <button
+        type="button"
+        className="filters-toggle"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls="filters-grid"
+      >
+        <SlidersHorizontal size={14} aria-hidden="true" />
+        Filters
+        <ChevronDown size={14} className="filters-chevron" aria-hidden="true" />
+      </button>
+
+      <div className="filters-grid" id="filters-grid">
+        <div className="field">
+          <label htmlFor="filter-source">Source</label>
+          <select id="filter-source" value={sourceFilter} onChange={(event) => onSourceChange(event.target.value)}>
+            <option value="both">All sources</option>
+            <option value="darglobal">DarGlobal</option>
+            <option value="wasalt">Wasalt</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="filter-location">Location</label>
+          <input
+            id="filter-location"
+            type="text"
+            placeholder="e.g. Riyadh, Dubai Marina"
+            value={filters.location || ''}
+            onChange={setField('location')}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="filter-type">Property type</label>
+          <select id="filter-type" value={filters.property_type || ''} onChange={setField('property_type')}>
+            <option value="">Any type</option>
+            <option value="apartment">Apartment</option>
+            <option value="villa">Villa</option>
+            <option value="townhouse">Townhouse</option>
+            <option value="office">Office</option>
+            <option value="retail">Retail</option>
+            <option value="land">Land</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="filter-bedrooms">Bedrooms</label>
+          <select id="filter-bedrooms" value={filters.bedrooms || ''} onChange={setField('bedrooms')}>
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+            <option value="5">5+</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="filter-max-price">Max price</label>
+          <input
+            id="filter-max-price"
+            type="number"
+            min="0"
+            inputMode="numeric"
+            placeholder="No limit"
+            value={filters.max_price || ''}
+            onChange={setField('max_price')}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
