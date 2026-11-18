@@ -59,8 +59,8 @@ All agents MUST read it before writing code. Do not change it without telling th
 - `e2b4020` infra: multi-stage Docker, compose stack and Render blueprint
 - `03729b2` docs+tests: QA results, sample dialogues, screenshots and handoff
 - `631d4e0` docs: final engineering handoff state
-- `633627a` hardening: verified Docker stack, security patches, UX polish, Vercel config
-- (this file) docs: record Docker + pentest milestone in handoff
+- `576ec86` hardening: verified Docker stack, security patches, UX polish, Vercel config
+- Local fastembed model cache was purged from history before the first push (history is ~1.3 MB packed).
 
 ## Notes / gotchas for the next agent
 
