@@ -19,6 +19,17 @@ def make_citation(source: str = "wasalt", index: int = 1) -> Citation:
     )
 
 
+def test_markdown_is_stripped_from_answer():
+    answer, _ = validate_answer(
+        "**DarGlobal:** [Neptune](https://darglobal.co.uk/neptune) - `price` [1]", 1
+    )
+    assert "**" not in answer
+    assert "`" not in answer
+    assert "[Neptune](https://" not in answer
+    assert "Neptune" in answer
+    assert "[1]" in answer
+
+
 def test_invalid_citation_markers_are_removed():
     answer, warnings = validate_answer("Great [1] deal [9].", 1)
     assert "[1]" in answer
@@ -62,7 +73,7 @@ async def test_user_chosen_conversation_id_is_replaced():
 
 async def test_unknown_question_returns_no_evidence_answer(monkeypatch):
     async def fake_retrieve(*args, **kwargs):
-        return [], "general", {}
+        return [], "general", {}, None
 
     async def fake_history(session, conversation_id):
         return conversation_id or "abc", []

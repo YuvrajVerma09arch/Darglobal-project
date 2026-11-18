@@ -4,6 +4,17 @@ import { fetchHealth, streamChat } from '../api.js';
 let counter = 0;
 const uid = () => `msg-${Date.now()}-${counter++}`;
 const EMPTY_FILTERS = { location: '', property_type: '', bedrooms: '', max_price: '' };
+const HISTORY_KEY = 're_ai_conversations';
+
+function loadSavedConversations() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.slice(0, 20) : [];
+  } catch {
+    return [];
+  }
+}
 
 const RATE_LIMIT_MESSAGE = 'Too many requests — wait a moment, then retry.';
 const isRateLimit = (error, detail) =>
@@ -13,6 +24,7 @@ const isRateLimit = (error, detail) =>
 export default function useChat() {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
+  const [savedConversations, setSavedConversations] = useState(loadSavedConversations);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
@@ -23,6 +35,7 @@ export default function useChat() {
   const [dataAsOf, setDataAsOf] = useState(null);
 
   const abortRef = useRef(null);
+  const persistTimer = useRef(null);
   const scrollRef = useRef(null);
   const pinnedRef = useRef(true);
 
@@ -49,6 +62,23 @@ export default function useChat() {
     if (!pinnedRef.current || !scrollRef.current) return;
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
+
+  // Keep a local archive of conversations so "New conversation" never destroys
+  // previous chats. Only chat text is stored here — no credentials or tokens.
+  useEffect(() => {
+    if (!messages.length || !conversationId) return undefined;
+    clearTimeout(persistTimer.current);
+    persistTimer.current = setTimeout(() => {
+      const title = messages.find((m) => m.role === 'user')?.text?.slice(0, 60) || 'Conversation';
+      setSavedConversations((previous) => {
+        const entry = { id: conversationId, title, messages, updatedAt: Date.now() };
+        const next = [entry, ...previous.filter((c) => c.id !== conversationId)].slice(0, 20);
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* storage disabled */ }
+        return next;
+      });
+    }, 400);
+    return () => clearTimeout(persistTimer.current);
+  }, [messages, conversationId]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
@@ -161,15 +191,38 @@ export default function useChat() {
 
   const handleStop = useCallback(() => abortRef.current?.abort(), []);
 
+  // Both "New conversation" and "Clear chat" archive the current chat, then
+  // start a blank one. Nothing is deleted from the recent list.
   const handleClear = useCallback(() => {
     abortRef.current?.abort();
+    if (messages.length && conversationId) {
+      const title = messages.find((m) => m.role === 'user')?.text?.slice(0, 60) || 'Conversation';
+      const entry = { id: conversationId, title, messages, updatedAt: Date.now() };
+      setSavedConversations((previous) => {
+        const next = [entry, ...previous.filter((c) => c.id !== conversationId)].slice(0, 20);
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* storage disabled */ }
+        return next;
+      });
+    }
     setMessages([]);
     setConversationId(null);
     setInput('');
     setError(null);
     setErrorDetail(null);
     pinnedRef.current = true;
-  }, []);
+  }, [messages, conversationId]);
+
+  const handleSelectConversation = useCallback((id) => {
+    const entry = savedConversations.find((c) => c.id === id);
+    if (!entry) return;
+    abortRef.current?.abort();
+    setMessages(Array.isArray(entry.messages) ? entry.messages : []);
+    setConversationId(entry.id);
+    setInput('');
+    setError(null);
+    setErrorDetail(null);
+    pinnedRef.current = true;
+  }, [savedConversations]);
 
   const handleFilterChange = useCallback((key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -196,5 +249,7 @@ export default function useChat() {
     handleRetry,
     handleStop,
     handleClear,
+    savedConversations,
+    handleSelectConversation,
   };
 }

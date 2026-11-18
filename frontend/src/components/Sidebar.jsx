@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Plus, X } from 'lucide-react';
+import { History, Plus, X } from 'lucide-react';
 import { EXAMPLE_QUESTIONS } from '../constants.js';
 import { formatDate } from '../utils/format.js';
 
@@ -9,7 +9,7 @@ const SOURCES = [
   { value: 'wasalt', label: 'Wasalt' },
 ];
 
-export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExample, dataAsOf, isOpen, onClose }) {
+export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExample, conversations = [], onSelectConversation, dataAsOf, isOpen, onClose }) {
   const closeRef = useRef(null);
   const onCloseRef = useRef(onClose);
 
@@ -79,6 +79,27 @@ export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExa
               ))}
             </div>
           </div>
+
+          {conversations.length ? (
+            <div className="sidebar-section sidebar-history">
+              <p className="sidebar-label" id="history-label">Recent conversations</p>
+              <ul className="history-list" aria-labelledby="history-label">
+                {conversations.slice(0, 6).map((conversation) => (
+                  <li key={conversation.id}>
+                    <button
+                      type="button"
+                      className="history-link"
+                      onClick={() => onSelectConversation(conversation.id)}
+                      title={conversation.title}
+                    >
+                      <History size={13} aria-hidden="true" />
+                      <span>{conversation.title}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="sidebar-section sidebar-examples">
             <p className="sidebar-label" id="example-label">Try asking</p>

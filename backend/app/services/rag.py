@@ -36,9 +36,20 @@ _CITATION_MARKER = re.compile(r"\[(\d+)\]")
 _OPAQUE_CONVERSATION_ID = re.compile(r"^[0-9a-f]{20}$")
 
 
+def sanitise_markdown(text: str) -> str:
+    """Force plain text even when the model ignores the prompt's no-markdown rule."""
+    # Markdown links -> label only. URLs are already listed as clickable citations.
+    text = re.sub(r"\[([^\]\n]+)\]\((https?://[^)\s]+)\)", r"\1", text)
+    # Bold/italic markers, inline code, heading hashes. Bullets use "- " and stay.
+    text = text.replace("**", "").replace("__", "").replace("`", "")
+    text = re.sub(r"^\s*#{1,6}\s+", "", text, flags=re.M)
+    return text
+
+
 def validate_answer(answer: str, citation_count: int) -> tuple[str, list[str]]:
-    """Strip citation markers the model invented; never emit unverifiable links."""
+    """Strip invalid citations and Markdown; never emit unverifiable links."""
     warnings: list[str] = []
+    answer = sanitise_markdown(answer)
     if citation_count == 0:
         cleaned = _CITATION_MARKER.sub("", answer)
         if cleaned != answer:
@@ -65,7 +76,7 @@ class RAGService:
         message: str,
         source_filter: SourceFilter,
         explicit_filters: Any,
-    ) -> tuple[list[RetrievedItem], str, dict[str, Any]]:
+    ) -> tuple[list[RetrievedItem], str, dict[str, Any], str | None]:
         vector = await embedding_service.embed_query(message)
         return await self.retriever.search(
             session,
@@ -119,12 +130,14 @@ class RAGService:
         return max(stamps) if stamps else None
 
     async def chat(self, session: AsyncSession, request: ChatRequest) -> ChatResponse:
-        items, query_type, applied = await self._retrieve(
+        items, query_type, applied, relaxation_note = await self._retrieve(
             session, request.message, request.source_filter, request.filters
         )
         conversation_id, history = await self._history(session, request.conversation_id)
         citations = [item.as_citation() for item in items]
         warnings: list[str] = []
+        if relaxation_note:
+            warnings.append("filters_relaxed")
 
         if not citations:
             answer = NO_EVIDENCE_ANSWER
@@ -137,6 +150,12 @@ class RAGService:
             warnings.append("llm_not_configured")
         else:
             context = build_context(citations, settings.context_max_chars)
+            if relaxation_note:
+                context = (
+                    f"RETRIEVAL NOTE: {relaxation_note} "
+                    "Tell the user their exact filters matched no records and that these are alternatives.\n\n"
+                    + context
+                )
             messages = build_messages(SYSTEM_PROMPT, history, request.message, context)
             try:
                 answer = await llm_client.acomplete(messages)
@@ -165,12 +184,14 @@ class RAGService:
         """Async generator yielding SSE frames. Opens its own DB session."""
         async with SessionLocal() as session:
             try:
-                items, query_type, applied = await self._retrieve(
+                items, query_type, applied, relaxation_note = await self._retrieve(
                     session, request.message, request.source_filter, request.filters
                 )
                 conversation_id, history = await self._history(session, request.conversation_id)
                 citations = [item.as_citation() for item in items]
                 warnings: list[str] = []
+                if relaxation_note:
+                    warnings.append("filters_relaxed")
 
                 if not citations:
                     answer = NO_EVIDENCE_ANSWER

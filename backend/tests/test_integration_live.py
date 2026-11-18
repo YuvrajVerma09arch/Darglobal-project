@@ -32,7 +32,7 @@ def test_live_hybrid_pipeline():
             vector = await embedding_service.embed_query(
                 "3 bedroom apartments in Riyadh under 2 million SAR"
             )
-            items, query_type, applied = await retriever.search(
+            items, query_type, applied, _ = await retriever.search(
                 session,
                 "3 bedroom apartments in Riyadh under 2 million SAR",
                 vector,
@@ -47,10 +47,25 @@ def test_live_hybrid_pipeline():
                 assert item.bedrooms == 3
                 assert item.price is None or item.price <= 2_000_000
 
-            darglobal, _, _ = await retriever.search(
+            darglobal, _, _, _ = await retriever.search(
                 session, "developments", vector, source_filter="darglobal", top_k=10
             )
             assert darglobal and all(item.source == "darglobal" for item in darglobal)
+
+            # An impossible exact combination must return real alternatives,
+            # not a dead-end answer.
+            relaxed = await rag_service.chat(
+                session,
+                ChatRequest(
+                    message="show me properties",
+                    filters=PropertyFilters(
+                        city="Riyadh", property_type="villa", bedrooms=3, max_price=2_000_000
+                    ),
+                ),
+            )
+            assert relaxed.retrieved_count > 0
+            assert "filters_relaxed" in relaxed.warnings
+            assert "don't have that information" not in relaxed.answer
 
             unsupported = await rag_service.chat(
                 session, ChatRequest(message="What is the population of Brazil?")

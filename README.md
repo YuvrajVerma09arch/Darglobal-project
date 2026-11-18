@@ -48,6 +48,11 @@ unvarnished record. **No synthetic or fabricated property data was added.**
 - Local embedding model (BGE-small via fastembed) — ingestion works before any
   API key is supplied; no property text is sent to an embedding vendor.
 - Source isolation (`darglobal` / `wasalt` / `both`) in both retrieval and UI.
+- Filter options (cities, property types, bedroom counts, max price) are derived
+  from the indexed corpus via `/api/v1/stats`, so they can't offer impossible values.
+- If an exact combination still matches nothing, constraints relax progressively
+  and the answer clearly labels the results as alternatives.
+- Recent conversations are archived locally; "New conversation" never deletes them.
 - Property cards, clickable citations, filter bar, clear-chat, loading and error
   states, accessible keyboard interactions, responsive layout.
 - Admin ingestion protected by `X-Admin-Key`; rate limiting, CORS allowlist,

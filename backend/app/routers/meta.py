@@ -84,6 +84,15 @@ async def stats(session: AsyncSession = Depends(get_db)):
             )
         ).all()
     )
+    bedroom_rows = (
+        await session.execute(
+            select(Property.bedrooms)
+            .where(Property.bedrooms.is_not(None))
+            .distinct()
+            .order_by(Property.bedrooms)
+        )
+    ).scalars().all()
+    price_cap = await session.scalar(select(func.max(Property.price)))
     last_scraped = await session.scalar(select(func.max(Property.scraped_at)))
     last_run = (
         await session.execute(
@@ -96,6 +105,8 @@ async def stats(session: AsyncSession = Depends(get_db)):
         sources={str(k): int(v) for k, v in by_source.items()},
         property_types={str(k): int(v) for k, v in by_type.items()},
         cities={str(k): int(v) for k, v in by_city.items()},
+        bedrooms=sorted(int(value) for value in bedroom_rows),
+        max_price=float(price_cap) if price_cap is not None else None,
         last_scraped_at=last_scraped,
         last_ingestion=(
             {

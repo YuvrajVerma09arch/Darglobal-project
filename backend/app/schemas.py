@@ -108,6 +108,7 @@ class SearchResponse(BaseModel):
     query_type: str
     filters_applied: dict[str, Any]
     data_as_of: datetime | None = None
+    note: str | None = None
 
 
 class PropertyOut(BaseModel):
@@ -158,6 +159,8 @@ class StatsResponse(BaseModel):
     sources: dict[str, int]
     property_types: dict[str, int]
     cities: dict[str, int]
+    bedrooms: list[int] = Field(default_factory=list)
+    max_price: float | None = None
     last_scraped_at: datetime | None = None
     last_ingestion: dict[str, Any] | None = None
 

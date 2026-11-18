@@ -94,6 +94,22 @@ ran 19 exploit attempts (admin auth incl. non-ASCII key, CORS reflection, SQLi,
 path traversal, XFF spoofing, oversized input, invalid enums, prompt injection,
 conversation takeover, SSE contract) — **19/19 passed**.
 
+### Filter reliability, plain-text output and conversation history
+- Filter dropdowns are now populated from `/api/v1/stats` (real cities, property
+  types, bedroom values and max price) instead of hardcoded guesses.
+- Impossible filter combinations no longer dead-end: the retriever relaxes
+  bedrooms → type → location → price, and finally offers other real records.
+  Browser test with Riyadh/villa/3 beds/≤2M returned 4 villas with a visible
+  "exact filters had no match" notice.
+- Markdown (`**bold**`, `[text](url)`, backticks, `#` headings) is stripped
+  deterministically in `validate_answer()`, so answers stay plain text even when
+  the model ignores the prompt rule. Browser test confirmed no `**` in output.
+- "New conversation" archives the current chat; a Recent conversations list in
+  the sidebar restores it. Browser test confirmed archive + restore.
+- The "Out of scope / mortgage" example was removed; guardrails remain in the
+  system prompt but the UI no longer invites testing them directly.
+- 45 tests pass including a live test for filter relaxation.
+
 ### Access-code gate and responsive controls (final round)
 - `APP_ACCESS_CODE` set → `/api/v1/access` reports `access_required: true`,
   chat without the header returns 401, chat with `X-Access-Code` returns 200.

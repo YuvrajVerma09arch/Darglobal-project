@@ -18,7 +18,7 @@ retriever = HybridRetriever()
 @router.post("", response_model=SearchResponse)
 async def search(request: SearchRequest, session: AsyncSession = Depends(get_db)):
     vector = await embedding_service.embed_query(request.query)
-    items, query_type, applied = await retriever.search(
+    items, query_type, applied, relaxation_note = await retriever.search(
         session,
         query=request.query,
         query_vector=vector,
@@ -39,4 +39,5 @@ async def search(request: SearchRequest, session: AsyncSession = Depends(get_db)
         query_type=query_type,
         filters_applied=applied,
         data_as_of=max(stamps) if stamps else None,
+        note=relaxation_note,
     )

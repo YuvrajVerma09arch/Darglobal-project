@@ -11,6 +11,10 @@ const WARNING_COPY = [
     text: 'Answer generation is unavailable right now. The matching sources are still shown below.',
   },
   { match: /^no_retrieved_evidence$/i, text: 'No matching evidence in this snapshot.' },
+  {
+    match: /^filters_relaxed$/i,
+    text: 'Your exact filters had no match — these are other real records from the same source.',
+  },
   { match: /^llm_unavailable$/i, text: 'The assistant is temporarily unavailable — please retry.' },
   {
     match: /^removed_/i,

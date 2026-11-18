@@ -134,6 +134,37 @@ class HybridRetriever:
     def __init__(self, rrf_k: int = 60) -> None:
         self.rrf_k = rrf_k
 
+    @staticmethod
+    def _item(
+        prop: Property,
+        snippet: str,
+        score: float,
+        semantic_score: float | None = None,
+        structured_match: bool = False,
+    ) -> RetrievedItem:
+        return RetrievedItem(
+            property_id=prop.id,
+            source=prop.source,
+            title=prop.title,
+            description=prop.description or "",
+            url=prop.source_url,
+            location=prop.location,
+            city=prop.city,
+            price=float(prop.price) if prop.price is not None else None,
+            currency=prop.currency,
+            bedrooms=prop.bedrooms,
+            bathrooms=prop.bathrooms,
+            area=float(prop.area) if prop.area is not None else None,
+            property_type=prop.property_type,
+            document_type=prop.document_type,
+            image_urls=prop.image_urls or [],
+            scraped_at=prop.scraped_at,
+            snippet=snippet[:1600],
+            score=score,
+            semantic_score=semantic_score,
+            structured_match=structured_match,
+        )
+
     async def search(
         self,
         session: AsyncSession,
@@ -143,9 +174,15 @@ class HybridRetriever:
         explicit_filters: PropertyFilters | None = None,
         top_k: int = 8,
         candidate_k: int = 24,
-    ) -> tuple[list[RetrievedItem], str, dict[str, Any]]:
+        allow_relax: bool = True,
+        use_query_filters: bool = True,
+    ) -> tuple[list[RetrievedItem], str, dict[str, Any], str | None]:
         parsed, query_type, _ = parse_query(query)
-        filters, applied = merge_filters(explicit_filters or PropertyFilters(), parsed)
+        if use_query_filters:
+            filters, applied = merge_filters(explicit_filters or PropertyFilters(), parsed)
+        else:
+            filters = explicit_filters or PropertyFilters()
+            applied = {k: v for k, v in filters.model_dump().items() if v is not None}
         conditions = build_conditions(filters, source_filter)
         # The property-id subquery is the bridge between exact SQL constraints
         # and the vector channel: both channels see the same structural filter.
@@ -225,31 +262,72 @@ class HybridRetriever:
             prop = structured_by_id.get(property_id)
             if prop is None:
                 continue
-            description = prop.description or ""
             items.append(
-                RetrievedItem(
-                    property_id=prop.id,
-                    source=prop.source,
-                    title=prop.title,
-                    description=description,
-                    url=prop.source_url,
-                    location=prop.location,
-                    city=prop.city,
-                    price=float(prop.price) if prop.price is not None else None,
-                    currency=prop.currency,
-                    bedrooms=prop.bedrooms,
-                    bathrooms=prop.bathrooms,
-                    area=float(prop.area) if prop.area is not None else None,
-                    property_type=prop.property_type,
-                    document_type=prop.document_type,
-                    image_urls=prop.image_urls or [],
-                    scraped_at=prop.scraped_at,
-                    snippet=best_snippet.get(prop.id, description)[:1600],
-                    score=score,
-                    semantic_score=semantic_rank.get(prop.id),
-                    structured_match=prop.id in structured_by_id and prop.id not in semantic_rank,
+                self._item(
+                    prop,
+                    best_snippet.get(prop.id, prop.description or ""),
+                    score,
+                    semantic_rank.get(prop.id),
+                    prop.id in structured_by_id and prop.id not in semantic_rank,
                 )
             )
+
+        relaxation_note: str | None = None
+        if not items and allow_relax and not filters.is_empty():
+            # Strict filters matched nothing. Relax one constraint group at a
+            # time and return real alternatives instead of a dead end.
+            base = filters.model_dump()
+            plan: list[tuple[dict[str, Any], str]] = []
+
+            def candidate(**drop: int) -> dict[str, Any]:
+                return {k: v for k, v in base.items() if v is not None and k not in drop}
+
+            plan.append((candidate(bedrooms=1, bathrooms=1), "Bedroom/bathroom counts were relaxed."))
+            plan.append(
+                (candidate(bedrooms=1, bathrooms=1, property_type=1), "Property type was relaxed.")
+            )
+            plan.append(
+                (
+                    candidate(bedrooms=1, bathrooms=1, property_type=1, location=1, city=1),
+                    "Location was relaxed.",
+                )
+            )
+            plan.append(
+                (
+                    candidate(
+                        bedrooms=1, bathrooms=1, property_type=1, location=1, city=1,
+                        min_price=1, max_price=1, listing_type=1,
+                    ),
+                    "Price and listing-type constraints were relaxed.",
+                )
+            )
+
+            for relaxed_filters, note in plan:
+                found, _, relaxed_applied, _ = await self.search(
+                    session,
+                    query=query,
+                    query_vector=query_vector,
+                    source_filter=source_filter,
+                    explicit_filters=PropertyFilters(**relaxed_filters),
+                    top_k=top_k,
+                    candidate_k=candidate_k,
+                    allow_relax=False,
+                    use_query_filters=False,
+                )
+                if found:
+                    items, applied, relaxation_note = found, relaxed_applied, note
+                    break
+
+            if not items:
+                # Last resort: show other real records from the same source so
+                # the user always has something concrete to refine from.
+                rows, _ = await self.search_without_vector(
+                    session, source_filter, PropertyFilters(), limit=top_k
+                )
+                items = [self._item(row, row.description or "", 0.0) for row in rows]
+                applied = {}
+                relaxation_note = "No exact match; showing other records from the snapshot."
+
         logger.info(
             "hybrid_retrieval",
             extra={
@@ -258,9 +336,10 @@ class HybridRetriever:
                 "semantic": len(semantic_rows),
                 "returned": len(items),
                 "filters": applied,
+                "relaxed": bool(relaxation_note),
             },
         )
-        return items, query_type, applied
+        return items, query_type, applied, relaxation_note
 
     async def search_without_vector(
         self,

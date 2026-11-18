@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fetchAccessRequirement, unlockWithCode } from './api.js';
+import { fetchAccessRequirement, fetchStats, unlockWithCode } from './api.js';
 import AccessGate from './components/AccessGate.jsx';
 import useChat from './hooks/useChat.js';
 import ChatHeader from './components/ChatHeader.jsx';
@@ -14,6 +14,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [access, setAccess] = useState({ ready: false, required: false, unlocked: false });
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -29,6 +30,13 @@ export default function App() {
       });
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    if (!access.unlocked) return undefined;
+    const controller = new AbortController();
+    fetchStats(controller.signal).then(setStats).catch(() => setStats(null));
+    return () => controller.abort();
+  }, [access.unlocked]);
 
   const handleUnlock = async (code) => {
     await unlockWithCode(code);
@@ -59,6 +67,8 @@ export default function App() {
         onSourceChange={chat.setSourceFilter}
         onNewChat={clearChat}
         onExample={openExample}
+        conversations={chat.savedConversations}
+        onSelectConversation={chat.handleSelectConversation}
         dataAsOf={chat.dataAsOf}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -96,6 +106,7 @@ export default function App() {
               sourceFilter={chat.sourceFilter}
               onSourceChange={chat.setSourceFilter}
               filters={chat.filters}
+              stats={stats}
               onFilterChange={chat.handleFilterChange}
               isOpen={filtersOpen}
               onToggle={() => setFiltersOpen((open) => !open)}

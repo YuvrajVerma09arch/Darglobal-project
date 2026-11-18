@@ -26,8 +26,8 @@ export const EXAMPLE_QUESTIONS = [
     question: 'Which projects offer golf course or waterfront amenities?',
   },
   {
-    label: 'Out of scope',
-    tag: 'Limits',
-    question: 'Can you advise me on getting a mortgage in Saudi Arabia?',
+    label: 'Price comparison',
+    tag: 'Prices',
+    question: 'Compare 3-bedroom apartments in Riyadh by their listed prices.',
   },
 ];

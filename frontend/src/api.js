@@ -173,6 +173,13 @@ export async function streamChat(request, handlers = {}) {
   return finalResponse;
 }
 
+/** Corpus stats — used to build filter options from real indexed data. */
+export async function fetchStats(signal) {
+  const response = await fetch(`${API_BASE}/api/v1/stats`, { signal, headers: withAccess() });
+  if (!response.ok) throw new Error('Could not load corpus stats');
+  return response.json();
+}
+
 /** Lightweight backend health probe for the connection badge. */
 export async function fetchHealth(signal) {
   const response = await fetch(`${API_BASE}/health`, { signal });

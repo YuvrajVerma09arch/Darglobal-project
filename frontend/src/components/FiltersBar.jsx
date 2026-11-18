@@ -1,7 +1,11 @@
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 
-export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFilterChange, isOpen, onToggle }) {
+export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFilterChange, stats, isOpen, onToggle }) {
   const setField = (key) => (event) => onFilterChange(key, event.target.value);
+  const cities = Object.keys(stats?.cities || {}).sort();
+  const types = Object.keys(stats?.property_types || {}).sort();
+  const bedrooms = stats?.bedrooms?.length ? stats.bedrooms : [1, 2, 3, 4, 5];
+  const maxPriceHint = stats?.max_price ? Math.round(stats.max_price).toLocaleString('en-US') : 'No limit';
   const activeCount =
     Object.values(filters || {}).filter(
       (value) => value !== '' && value !== null && value !== undefined,
@@ -55,32 +59,27 @@ export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFi
           <input
             id="filter-location"
             type="text"
-            placeholder="e.g. Riyadh, Dubai Marina"
+            placeholder={cities.length ? `e.g. ${cities.slice(0, 2).join(', ')}` : 'e.g. Riyadh'}
+            list="filter-location-options"
             value={filters.location || ''}
             onChange={setField('location')}
           />
+          <datalist id="filter-location-options">
+            {cities.map((city) => <option key={city} value={city} />)}
+          </datalist>
         </div>
         <div className="field">
           <label htmlFor="filter-type">Property type</label>
           <select id="filter-type" value={filters.property_type || ''} onChange={setField('property_type')}>
             <option value="">Any type</option>
-            <option value="apartment">Apartment</option>
-            <option value="villa">Villa</option>
-            <option value="townhouse">Townhouse</option>
-            <option value="office">Office</option>
-            <option value="retail">Retail</option>
-            <option value="land">Land</option>
+            {types.map((type) => <option key={type} value={type.toLowerCase()}>{type}</option>)}
           </select>
         </div>
         <div className="field">
           <label htmlFor="filter-bedrooms">Bedrooms</label>
           <select id="filter-bedrooms" value={filters.bedrooms || ''} onChange={setField('bedrooms')}>
             <option value="">Any</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-            <option value="4">4+</option>
-            <option value="5">5+</option>
+            {bedrooms.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
         </div>
         <div className="field">
@@ -90,7 +89,7 @@ export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFi
             type="number"
             min="0"
             inputMode="numeric"
-            placeholder="No limit"
+            placeholder={maxPriceHint}
             value={filters.max_price || ''}
             onChange={setField('max_price')}
           />
