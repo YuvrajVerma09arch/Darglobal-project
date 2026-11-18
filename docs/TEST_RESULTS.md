@@ -102,6 +102,10 @@ conversation takeover, SSE contract) — **19/19 passed**.
   hamburger opens the drawer and the X closes it (previous bug: a later
   `.icon-btn { display:inline-grid }` rule overrode their `display:none`).
 - Docker images rebuilt after these changes; compose stack healthy.
+- Brute-force simulation: 35 wrong access-code guesses in one minute produced
+  30×401 then 5×429 — the sliding-window limiter caps guesses at 30/min/path.
+  Header-based identity spoofing (`X-Forwarded-For`) was already verified not to
+  defeat this limit (see the dynamic pentest above).
 
 ### LLM fallback verification
 - With an intentionally invalid `LLM_API_KEY`, `acomplete()` and `astream()`
