@@ -53,13 +53,15 @@ All agents MUST read it before writing code. Do not change it without telling th
 
 ## Commit log
 
-- `0ca4097` feat(backend): FastAPI RAG API with hybrid retrieval, ingestion and scrapers
-- `5775351` data: add 57 attributable public records and access report
-- `bb98364` feat(frontend): premium real-estate chat UI with SSE, filters and property cards
-- `e2b4020` infra: multi-stage Docker, compose stack and Render blueprint
-- `03729b2` docs+tests: QA results, sample dialogues, screenshots and handoff
-- `631d4e0` docs: final engineering handoff state
-- `576ec86` hardening: verified Docker stack, security patches, UX polish, Vercel config
+- `d95acd1` feat(backend): FastAPI RAG API with hybrid retrieval, ingestion and scrapers
+- `cd35075` data: add 57 attributable public records and access report
+- `5aa86d6` feat(frontend): premium real-estate chat UI with SSE, filters and property cards
+- `040839b` infra: multi-stage Docker, compose stack and Render blueprint
+- `b1083bb` docs+tests: QA results, sample dialogues, screenshots and handoff
+- `46045f7` docs: final engineering handoff state
+- `fafe557` hardening: verified Docker stack, security patches, UX polish, Vercel config
+- `49fe308` docs: note history cleanup in handoff (latest)
+- All commits authored by the user's local Git identity (`Telos <telos2909@gmail.com>`).
 - Local fastembed model cache was purged from history before the first push (history is ~1.3 MB packed).
 
 ## Notes / gotchas for the next agent
