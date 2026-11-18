@@ -33,6 +33,7 @@ FROM nginx:1.27-alpine AS runtime
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 RUN sed -i -e 's|/var/cache/nginx|/tmp/nginx|g' \
             -e 's|/var/run/nginx.pid|/tmp/nginx.pid|g' \
+            -e 's|/run/nginx.pid|/tmp/nginx.pid|g' \
             /etc/nginx/nginx.conf \
     && mkdir -p /tmp/nginx/client_temp /tmp/nginx/proxy_temp \
                /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp \

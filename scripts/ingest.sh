@@ -25,10 +25,17 @@ case "$SOURCE" in
   *) echo "source must be one of: both, darglobal, wasalt" >&2; exit 1 ;;
 esac
 
+# Pass the secret through a 0600 curl config file so it is never visible in
+# the process list or shell history.
+CURL_CONFIG="$(mktemp)"
+trap 'rm -f "$CURL_CONFIG"' EXIT
+chmod 600 "$CURL_CONFIG"
+printf 'header = "X-Admin-Key: %s"\n' "$ADMIN_KEY" > "$CURL_CONFIG"
+
 echo "POST $BASE_URL/api/v1/admin/ingest  (source=$SOURCE)"
 RESPONSE="$(curl -sS --max-time 600 \
+  -K "$CURL_CONFIG" \
   -X POST "$BASE_URL/api/v1/admin/ingest" \
-  -H "X-Admin-Key: $ADMIN_KEY" \
   -H 'Content-Type: application/json' \
   -d "{\"source\":\"$SOURCE\"}" \
   -w $'\n%{http_code}')"

@@ -70,6 +70,22 @@ def test_sitemap_url_extraction_filters_property_pages():
     assert all("/property/sale/" in u or "/dailyrental/" in u for u in urls)
 
 
+async def test_scraper_rejects_non_allowlisted_and_private_urls():
+    from app.scraper.base import ScrapeBlocked
+
+    scraper = DarGlobalScraper()
+    for url in (
+        "http://169.254.169.254/latest/meta-data/",
+        "https://evil.example.com/x",
+        "javascript:alert(1)",
+    ):
+        try:
+            await scraper.validate_url(url)
+        except ScrapeBlocked:
+            continue
+        raise AssertionError(f"Expected {url} to be rejected")
+
+
 def test_jsonld_payload_is_valid_after_serialisation():
     scraper = DarGlobalScraper()
     record = scraper.extract("https://darglobal.co.uk/neptune", DAR_HTML)

@@ -17,6 +17,18 @@ def test_missing_fields_remain_null_and_lists_are_empty():
     assert record["source"] == "wasalt"
 
 
+def test_unsafe_urls_are_dropped():
+    record = normalise_record(
+        {
+            "source": "wasalt",
+            "source_url": "javascript:alert(1)",
+            "image_urls": ["https://images.example/x.jpg", "javascript:alert(2)"],
+        }
+    )
+    assert record["source_url"] == ""
+    assert record["image_urls"] == ["https://images.example/x.jpg"]
+
+
 def test_provenance_is_preserved_in_metadata():
     record = normalise_record(
         {

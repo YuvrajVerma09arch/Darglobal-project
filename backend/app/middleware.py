@@ -26,7 +26,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._lock = asyncio.Lock()
 
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path
+        # Use the ASGI path, not request.url.path: the latter can be influenced
+        # by a poisoned Host header (Starlette BadHost class of bug).
+        path = (request.scope.get("path") or "").rstrip("/") or "/"
         is_chat = path.endswith("/chat")
         is_admin = path.endswith("/admin/ingest")
         if is_chat or is_admin or path.startswith("/api/"):

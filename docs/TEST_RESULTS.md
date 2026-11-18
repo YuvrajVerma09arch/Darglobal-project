@@ -71,11 +71,42 @@ cd ../frontend && npm run build && npm audit --omit=dev
    Render ingestion find zero records. Both fixed; raw JSONL is baked into the
    backend image.
 
+## Authorized security assessment (own application)
+
+Static review by two independent agents (application code + dependencies/config)
+plus a UX review were run before hardening. Findings and fixes:
+
+| Severity | Finding | Fix applied |
+|---|---|---|
+| High | `--proxy-headers --forwarded-allow-ips '*'` made `X-Forwarded-For` spoofable, defeating per-IP rate limits | Removed wildcard proxy trust from `backend/Dockerfile`; limiter now keys on the ASGI path and real peer address |
+| High | Raw JSONL snapshots were gitignored, so a clean Render clone would ingest 0 records | Unignored `data/raw/*.jsonl` and committed the real snapshots |
+| High | `/health` returned 200 when degraded, so Render would never restart a broken DB | Returns HTTP 503 when the DB is unavailable |
+| Medium | Scraper followed redirects/sitemap URLs without host validation (SSRF to metadata endpoint) | Host allowlist + DNS/private-IP checks + manual redirect validation in `scraper/base.py` |
+| Medium | Client-chosen `conversation_id` allowed cross-conversation history tampering | Only opaque server-generated 20-hex IDs are accepted; 7-day TTL cleanup added |
+| Medium | Streamed tokens were emitted before citation validation | Tokens now streamed only while they remain a valid prefix of the validated answer |
+| Medium | Known-vulnerable `starlette 0.41.3` / `lxml 5.3.0` | Upgraded to FastAPI 0.163.2 (Starlette 1.10.0) and lxml 6.1.3 |
+| Low | Scraped `javascript:` URLs could be rendered as links/images | `http/https` scheme allowlist in ingestion; CSP narrowed in nginx/Vercel |
+| Low | Admin key on curl command line; non-ASCII header could 500 | 0600 curl config file; `compare_digest` TypeError caught → 401 |
+| Low | Muted text contrast, weak focus ring, global citation anchors, token flood for screen readers, hidden data-currency | Fixed by frontend UX agent; see `docs/SCREENSHOTS.md` after redeploy |
+
+Dynamic verification on the final Docker stack: `python3 scripts/pentest_local.py`
+ran 19 exploit attempts (admin auth incl. non-ASCII key, CORS reflection, SQLi,
+path traversal, XFF spoofing, oversized input, invalid enums, prompt injection,
+conversation takeover, SSE contract) — **19/19 passed**.
+
+Additional final verification after hardening:
+- `docker compose up --build` — all three images built, db/backend healthy,
+  frontend container initially failed on nginx temp/pid paths and was fixed
+  (`client_body_temp_path` + `/tmp/nginx.pid` rewrite); now healthy and serving 200.
+- Admin ingestion inside the container — 57 records / 57 chunks, idempotent.
+- Real OpenRouter generation — grounded answers with inline `[n]` markers and
+  clickable citations; plain-text answer formatting enforced in the system prompt.
+- Frontend E2E screenshots refreshed from the final container at `localhost:8080`.
+
 ## Not verified here
 
-- Docker image builds and `docker compose up` — Docker is not installed on the
-  build machine (user will install it). Configuration was statically validated.
-- Live OpenRouter generation — no API key was provided during the build. The
-  provider abstraction, streaming path and answer validation were verified with
-  the key-absent fallback and mocked paths.
-- Public Render deployment — requires the assignment owner's account.
+- Public Render + Vercel deployment — requires the assignment owner's accounts
+  and repositories. `render.yaml`, `vercel.json` and `docs/DEPLOYMENT.md` contain
+  the full configuration and click-by-click steps.
+- Multi-instance rate limiting — the limiter is per-process; a shared Redis
+  store is needed if the backend is scaled horizontally.

@@ -3,12 +3,12 @@ export const EXAMPLE_QUESTIONS = [
   {
     label: 'DarGlobal projects',
     tag: 'DarGlobal',
-    question: 'What projects is DarGlobal currently developing in Dubai?',
+    question: 'What DarGlobal projects in Dubai are in the snapshot?',
   },
   {
     label: 'Dubai properties',
     tag: 'Dubai',
-    question: 'Show me luxury properties in Dubai under AED 5 million.',
+    question: 'Show me luxury properties in Dubai under 5 million SAR.',
   },
   {
     label: 'Riyadh apartments',

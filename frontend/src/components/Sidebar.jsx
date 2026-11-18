@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Plus, X } from 'lucide-react';
 import { EXAMPLE_QUESTIONS } from '../constants.js';
 import { formatDate } from '../utils/format.js';
@@ -9,6 +10,29 @@ const SOURCES = [
 ];
 
 export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExample, dataAsOf, isOpen, onClose }) {
+  const closeRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const previouslyFocused = document.activeElement;
+    closeRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onCloseRef.current?.();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
+    };
+  }, [isOpen]);
+
   return (
     <>
       {isOpen ? <div className="sidebar-overlay" onClick={onClose} aria-hidden="true" /> : null}
@@ -19,7 +43,13 @@ export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExa
             <span className="brand-name">DarGlobal <span aria-hidden="true">×</span> Wasalt</span>
             <span className="brand-sub">Real Estate Intelligence Assistant</span>
           </span>
-          <button type="button" className="icon-btn sidebar-close" onClick={onClose} aria-label="Close menu">
+          <button
+            type="button"
+            ref={closeRef}
+            className="icon-btn sidebar-close"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
             <X size={16} aria-hidden="true" />
           </button>
         </div>
@@ -41,6 +71,7 @@ export default function Sidebar({ sourceFilter, onSourceChange, onNewChat, onExa
                   type="button"
                   className={`chip ${sourceFilter === source.value ? 'active' : ''}`}
                   aria-pressed={sourceFilter === source.value}
+                  aria-label={`${source.label} source — same setting as the Source filter dropdown`}
                   onClick={() => onSourceChange(source.value)}
                 >
                   {source.label}

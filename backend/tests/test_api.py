@@ -21,11 +21,15 @@ def test_root_and_openapi():
 def test_health_returns_structured_payload():
     with client() as http:
         response = http.get("/health")
-        assert response.status_code == 200
+        # With a live DB this is 200/ok; without one it must be 503/degraded so
+        # a platform health check actually detects the broken dependency.
+        assert response.status_code in {200, 503}
         body = response.json()
         assert body["status"] in {"ok", "degraded"}
         assert body["database"] in {"connected", "unavailable"}
         assert "indexed_chunks" in body
+        if response.status_code == 503:
+            assert body["status"] == "degraded"
 
 
 def test_chat_rejects_empty_message():

@@ -13,6 +13,13 @@ export default function WelcomeScreen({ onExample }) {
           Ask about projects, listings, locations and amenities across both portfolios. Every answer is
           grounded in retrieved property records — with the sources shown beneath it.
         </p>
+        <div className="welcome-context">
+          <p>DarGlobal — archived public snapshots of project pages (no prices published).</p>
+          <p>
+            Wasalt — captured listing pages with prices as listed, not live availability. Filters and
+            follow-ups refine your results.
+          </p>
+        </div>
         <div className="welcome-grid">
           {EXAMPLE_QUESTIONS.map((example, index) => {
             const Icon = ICONS[index % ICONS.length];

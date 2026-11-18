@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,10 +32,15 @@ async def health(session: AsyncSession = Depends(get_db)):
         }
     except Exception as exc:  # pragma: no cover
         logger.error("health_check_failed", extra={"error": str(exc)[:200]})
-        return {
-            "status": "degraded",
-            "version": __version__,
-            "database": "unavailable",
-            "indexed_chunks": 0,
-            "last_ingest_at": None,
-        }
+        # A degraded service must fail its platform health check instead of
+        # reporting 200 forever (Render polls /health to decide restarts).
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "degraded",
+                "version": __version__,
+                "database": "unavailable",
+                "indexed_chunks": 0,
+                "last_ingest_at": None,
+            },
+        )

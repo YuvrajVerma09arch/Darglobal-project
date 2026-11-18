@@ -7,9 +7,10 @@
   --sidebar-bg: #fbf9f5;
   --ink: #14181f;
   --slate: #5b6472;
-  --muted: #8a8f98;
+  --muted: #6b7280;
   --brass: #a67c3d;
   --brass-deep: #8a652f;
+  --brass-text: #6d4f24;
   --brass-soft: #f3e8d5;
   --brass-line: #e3d2b4;
   --sand: #f0e7d8;
@@ -560,7 +561,7 @@ p {
   border: 1px solid var(--brass-line);
   border-radius: 3px;
   background: var(--brass-soft);
-  color: var(--brass-deep);
+  color: var(--brass-text);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -631,6 +632,57 @@ p {
   color: var(--slate);
 }
 
+.message-stopped-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.continue-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--brass-line);
+  border-radius: var(--radius-sm);
+  background: var(--brass-soft);
+  color: var(--brass-text);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.continue-btn:hover {
+  border-color: var(--brass);
+  color: var(--brass-deep);
+}
+
+.citations-label.data-currency {
+  margin: var(--space-3) 0 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--brass-text);
+}
+
+.answer-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--brass-line);
+  border-radius: var(--radius-sm);
+  background: var(--brass-soft);
+  color: var(--brass-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.answer-warning svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 /* ==========================================================================
    Citations
    ========================================================================== */
@@ -666,6 +718,22 @@ p {
 
 .citation-row:last-child {
   border-bottom: 0;
+}
+
+.citation-number {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1px solid var(--brass-line);
+  border-radius: 3px;
+  background: var(--brass-soft);
+  color: var(--brass-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .citation-main {
@@ -755,6 +823,35 @@ p {
   color: var(--slate);
 }
 
+.property-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.property-status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border: 1px solid var(--brass-line);
+  border-radius: 3px;
+  background: #fffdf9;
+  color: var(--brass-text);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: capitalize;
+}
+
+.property-price-na {
+  color: var(--slate);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-style: italic;
+}
+
 /* ==========================================================================
    Property cards
    ========================================================================== */
@@ -786,7 +883,7 @@ p {
   padding: 0 5px;
   border-radius: 999px;
   background: var(--sand);
-  color: var(--brass-deep);
+  color: var(--brass-text);
   font-size: 10px;
   font-weight: 700;
 }
@@ -888,7 +985,7 @@ p {
   gap: 4px;
   margin-top: auto;
   padding-top: var(--space-2);
-  color: var(--brass-deep);
+  color: var(--brass-text);
   font-size: 11.5px;
   font-weight: 700;
   text-decoration: none;
@@ -913,7 +1010,7 @@ p {
 
 .welcome-eyebrow {
   margin-bottom: var(--space-3);
-  color: var(--brass-deep);
+  color: var(--brass-text);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -935,6 +1032,24 @@ p {
   color: var(--slate);
   font-size: 13.5px;
   line-height: 1.7;
+}
+
+.welcome-context {
+  max-width: 620px;
+  margin: calc(-1 * var(--space-3)) 0 var(--space-5);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--brass-line);
+  color: var(--slate);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.welcome-context p {
+  margin-bottom: 2px;
+}
+
+.welcome-context p:last-child {
+  margin-bottom: 0;
 }
 
 .welcome-grid {
@@ -980,7 +1095,7 @@ p {
 }
 
 .example-tag {
-  color: var(--brass-deep);
+  color: var(--brass-text);
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -1057,14 +1172,14 @@ p {
 }
 
 .field input::placeholder {
-  color: #a7abb2;
+  color: #767c86;
 }
 
 .field input:focus,
 .field select:focus {
   border-color: var(--brass);
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(166, 124, 61, 0.12);
+  outline: 2px solid var(--brass);
+  outline-offset: 1px;
 }
 
 .composer-box {
@@ -1098,7 +1213,7 @@ p {
 }
 
 .composer-textarea::placeholder {
-  color: #9a9fa7;
+  color: #767c86;
 }
 
 .send-btn {
@@ -1202,6 +1317,10 @@ p {
 
   .mobile-menu-btn {
     display: inline-grid;
+  }
+
+  .icon-btn {
+    min-height: 40px;
   }
 
   .chat-header {

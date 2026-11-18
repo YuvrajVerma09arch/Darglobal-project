@@ -34,20 +34,22 @@ All agents MUST read it before writing code. Do not change it without telling th
 - Subagent INFRA: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `render.yaml`, `scripts/**`, `docs/DEPLOYMENT.md`
 - Subagent RESEARCH: read-only website investigation (no files)
 
-## Current state (final build handoff, 2026-11-18)
+## Current state (final build handoff, updated 2026-11-18 after Docker + pentest)
 
-- [x] Requirements clarified with user (path, OpenRouter default, Render, local git, no bypass)
-- [x] Repo initialised at `~/Projects/darglobal-wasalt-ai`, 5 local commits
-- [x] Skills used: frontend-ui-engineering, security-and-hardening
+- [x] Requirements clarified with user (OpenRouter default, Render backend + Vercel frontend, local git, no third-party bypass)
+- [x] Repo at `~/Projects/darglobal-wasalt-ai`, local commits at each milestone
+- [x] Skills used: frontend-ui-engineering, security-and-hardening, conducting-api-security-testing
 - [x] Website research completed; darglobal.com mismatch and access restrictions documented
-- [x] 57 real records ingested (29 DarGlobal archived snapshots + 28 Wasalt rendered listings)
-- [x] Backend: FastAPI, async SQLAlchemy/pgvector, hybrid retrieval, RAG, SSE, admin ingest, rate limits, security headers
-- [x] Scrapers + idempotent ingestion verified against local Postgres 17 + pgvector 0.8.7
-- [x] Frontend: React/Vite premium UI, filters, citations, property cards, streaming, responsive (browser-tested)
-- [x] Docker + Render config written and statically validated (Docker absent on this machine)
-- [x] Tests: 37 passing including live-DB integration
-- [x] Documentation: README, architecture, API contract, data collection report, access notes, deployment guide, QA results, screenshots
-- [ ] **Deployment: BLOCKED on user action** — Render account/services must be created by the user from `render.yaml`; no credentials were shared, so no public URL exists yet.
+- [x] 57 real records ingested (29 DarGlobal archived snapshots + 28 Wasalt rendered listings); JSONL now committed for clean-clone deploys
+- [x] Backend: FastAPI 0.163.2 / Starlette 1.10.0, async SQLAlchemy/pgvector, hybrid retrieval, RAG, SSE, admin ingest, rate limits, security headers
+- [x] Scrapers + idempotent ingestion verified against local Postgres 17 and Docker pgvector:pg16
+- [x] Frontend: React/Vite premium UI, filters, citations, property cards, streaming, responsive, UX fixes (warnings, data currency, unique anchors, a11y)
+- [x] Docker Compose FULLY VERIFIED: `./scripts/docker compose up --build` (frontend nginx temp/pid bug fixed)
+- [x] Real OpenRouter generation verified with grounded `[n]` citations and plain-text answers
+- [x] Authorized security review (2 static agents + 19 dynamic exploit checks): 19/19 passed after patches
+- [x] Tests: 40 passing including live-DB integration
+- [x] Documentation: README, architecture, API contract, data report, access notes, Render+Vercel deployment guide, QA results, screenshots
+- [ ] **Deployment: user action** — user connects GitHub and deploys backend on Render, frontend on Vercel using `render.yaml` / `vercel.json`. Set `VITE_API_BASE_URL` in Vercel and `ALLOWED_ORIGINS` in Render to the real Vercel URL, set `LLM_API_KEY`, run `/api/v1/admin/ingest`, then smoke-test externally.
 
 ## Commit log
 
@@ -56,11 +58,15 @@ All agents MUST read it before writing code. Do not change it without telling th
 - `bb98364` feat(frontend): premium real-estate chat UI with SSE, filters and property cards
 - `e2b4020` infra: multi-stage Docker, compose stack and Render blueprint
 - `03729b2` docs+tests: QA results, sample dialogues, screenshots and handoff
+- `631d4e0` docs: final engineering handoff state
+- `633627a` hardening: verified Docker stack, security patches, UX polish, Vercel config
+- (this file) docs: record Docker + pentest milestone in handoff
 
 ## Notes / gotchas for the next agent
 
-- `docker` is not installed here; compose was never executed. Validate renders manually after install.
-- `LLM_API_KEY` must be set in Render for generated answers. Without it the API still serves retrieval, citations and property cards with a clear warning.
+- Docker CLI is not on `PATH`; use `./scripts/docker compose ...`.
+- `LLM_API_KEY` is now configured locally and verified with OpenRouter; set it in Render for the public deployment.
+- Render + Vercel split: `VITE_API_BASE_URL` must be set in Vercel; Render `ALLOWED_ORIGINS` must match the Vercel URL exactly.
 - If Render managed Postgres lacks pgvector, use an external pgvector DB (e.g. Neon) and set `DATABASE_URL` to `postgresql+asyncpg://...`.
 - Raw JSONL is baked into the backend image and mounted in compose; first ingest is idempotent.
 - A user asking to "bypass security" of these sites was declined; do not revisit. Wayback + renderer + sitemaps are the legitimate sources used.

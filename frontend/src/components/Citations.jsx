@@ -13,9 +13,13 @@ function citationMeta(item) {
   return parts.join('  ·  ');
 }
 
-export default function Citations({ citations = [] }) {
+export default function Citations({ citations = [], messageId }) {
   if (!citations.length) {
-    return <p className="citations-empty">No source excerpts retrieved</p>;
+    return (
+      <p className="citations-empty">
+        No matching listings in this snapshot — try a broader location or clear filters.
+      </p>
+    );
   }
 
   return (
@@ -26,7 +30,12 @@ export default function Citations({ citations = [] }) {
           const url = item.url || item.source_url;
           const meta = citationMeta(item);
           return (
-            <li key={item.record_id || item.id || index} id={`citation-${index + 1}`} className="citation-row">
+            <li
+              key={item.record_id || item.id || index}
+              id={`${messageId}-citation-${index + 1}`}
+              className="citation-row"
+            >
+              <span className="citation-number" aria-hidden="true">{index + 1}</span>
               <SourceBadge source={item.source} />
               <div className="citation-main">
                 <span className="citation-title">{item.title || 'Untitled property'}</span>

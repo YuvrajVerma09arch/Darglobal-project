@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Convenience wrapper: Docker Desktop is installed but its CLI is not on PATH
+# on this machine. Usage: ./scripts/docker compose up --build
+set -euo pipefail
+exec /Applications/Docker.app/Contents/Resources/bin/docker "$@"

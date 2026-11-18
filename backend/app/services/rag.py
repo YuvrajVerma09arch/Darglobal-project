@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -30,6 +31,9 @@ NO_EVIDENCE_ANSWER = (
     "that appear in the collected sources."
 )
 _CITATION_MARKER = re.compile(r"\[(\d+)\]")
+# Only accept opaque server-generated IDs. Rejecting user-chosen IDs prevents a
+# guessed/shared value from reading or overwriting another conversation.
+_OPAQUE_CONVERSATION_ID = re.compile(r"^[0-9a-f]{20}$")
 
 
 def validate_answer(answer: str, citation_count: int) -> tuple[str, list[str]]:
@@ -75,9 +79,17 @@ class RAGService:
 
     @staticmethod
     async def _history(session: AsyncSession, conversation_id: str | None) -> tuple[str, list[dict]]:
-        if not conversation_id:
+        # Opportunistic TTL cleanup keeps the table bounded.
+        if random.random() < 0.05:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+            await session.execute(
+                delete(Conversation).where(Conversation.created_at < cutoff)
+            )
+        if not conversation_id or not _OPAQUE_CONVERSATION_ID.fullmatch(conversation_id):
             return uuid.uuid4().hex[:20], []
         row = await session.get(Conversation, conversation_id)
+        if row is None:
+            return uuid.uuid4().hex[:20], []
         return conversation_id, (row.messages if row else [])
 
     @staticmethod
@@ -173,12 +185,21 @@ class RAGService:
                 else:
                     context = build_context(citations, settings.context_max_chars)
                     messages = build_messages(SYSTEM_PROMPT, history, request.message, context)
-                    answer_parts: list[str] = []
+                    raw_answer = ""
+                    safe_answer = ""
                     try:
                         async for token in llm_client.astream(messages):
-                            answer_parts.append(token)
-                            yield self._frame("token", {"text": token})
-                        answer = "".join(answer_parts)
+                            raw_answer += token
+                            cleaned, _ = validate_answer(raw_answer, len(citations))
+                            # Only stream text that is still a valid prefix of the
+                            # validated answer; this prevents a forged [n] marker
+                            # from flashing in the UI before the done event.
+                            if cleaned.startswith(safe_answer):
+                                delta = cleaned[len(safe_answer) :]
+                                safe_answer = cleaned
+                                if delta:
+                                    yield self._frame("token", {"text": delta})
+                        answer = validate_answer(raw_answer, len(citations))[0]
                     except LLMUnavailableError:
                         answer = "The language model is temporarily unavailable. Please try again."
                         warnings.append("llm_unavailable")

@@ -64,9 +64,10 @@ services:
       - key: ADMIN_API_KEY
         sync: false
 
-      # Must match the frontend service's public URL; update if renamed.
+      # Must match the FRONTEND origin exactly (Vercel in the chosen topology).
+      # Replace this placeholder with the real Vercel URL before the first chat.
       - key: ALLOWED_ORIGINS
-        value: https://darglobal-wasalt-frontend.onrender.com
+        value: https://your-app.vercel.app
 
       - key: RATE_LIMIT_PER_MINUTE
         value: "30"
@@ -100,7 +101,7 @@ services:
       - key: LLM_TIMEOUT_SECONDS
         value: "60"
       - key: LLM_HTTP_REFERER
-        value: https://darglobal-wasalt-frontend.onrender.com
+        value: https://your-app.vercel.app
       - key: LLM_APP_NAME
         value: darglobal-wasalt-ai
 

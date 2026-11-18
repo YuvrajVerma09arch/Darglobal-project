@@ -2,6 +2,10 @@ import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 
 export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFilterChange, isOpen, onToggle }) {
   const setField = (key) => (event) => onFilterChange(key, event.target.value);
+  const activeCount =
+    Object.values(filters || {}).filter(
+      (value) => value !== '' && value !== null && value !== undefined,
+    ).length + (sourceFilter && sourceFilter !== 'both' ? 1 : 0);
 
   return (
     <section className={`filters-bar ${isOpen ? 'is-open' : ''}`} aria-label="Search filters">
@@ -13,14 +17,19 @@ export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFi
         aria-controls="filters-grid"
       >
         <SlidersHorizontal size={14} aria-hidden="true" />
-        Filters
+        {!isOpen && activeCount ? `Filters · ${activeCount} active` : 'Filters'}
         <ChevronDown size={14} className="filters-chevron" aria-hidden="true" />
       </button>
 
       <div className="filters-grid" id="filters-grid">
         <div className="field">
           <label htmlFor="filter-source">Source</label>
-          <select id="filter-source" value={sourceFilter} onChange={(event) => onSourceChange(event.target.value)}>
+          <select
+            id="filter-source"
+            value={sourceFilter}
+            onChange={(event) => onSourceChange(event.target.value)}
+            aria-label="Source filter — same setting as the source buttons in the menu"
+          >
             <option value="both">All sources</option>
             <option value="darglobal">DarGlobal</option>
             <option value="wasalt">Wasalt</option>

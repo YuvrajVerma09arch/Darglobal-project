@@ -16,6 +16,16 @@ from typing import Any
 
 from app.paths import project_root
 
+_ALLOWED_URL_SCHEMES = {"http", "https"}
+
+
+def _safe_http_url(value: str) -> bool:
+    """Reject javascript:, data:, file: and other non-web URLs from scraped data."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(value)
+    return parsed.scheme in _ALLOWED_URL_SCHEMES and bool(parsed.netloc)
+
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,9 +59,13 @@ OPTIONAL_INTS = ("bedrooms", "bathrooms")
 
 def normalise_record(raw: dict[str, Any]) -> dict[str, Any]:
     """Coerce a raw snapshot row into the normalized schema. Missing => null."""
+    source_url = str(raw.get("source_url") or "").strip()
+    if source_url and not _safe_http_url(source_url):
+        logger.warning("unsafe_source_url_dropped", extra={"url": source_url[:120]})
+        source_url = ""
     record: dict[str, Any] = {
         "source": str(raw.get("source") or "unknown").lower().strip(),
-        "source_url": str(raw.get("source_url") or "").strip(),
+        "source_url": source_url,
     }
     for key in OPTIONAL_STRINGS:
         value = clean_text(str(raw.get(key))) if raw.get(key) is not None else None
@@ -68,7 +82,8 @@ def normalise_record(raw: dict[str, Any]) -> dict[str, Any]:
                 record[key] = None
     for key in OPTIONAL_LISTS:
         value = raw.get(key)
-        record[key] = [str(item) for item in value] if isinstance(value, (list, tuple)) else []
+        items = [str(item) for item in value] if isinstance(value, (list, tuple)) else []
+        record[key] = [item for item in items if _safe_http_url(item)] if key == "image_urls" else items
     record["document_type"] = record.get("document_type") or "property"
     record["scraped_at"] = parse_timestamp(raw.get("scraped_at")) or datetime.now(timezone.utc)
     metadata = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}

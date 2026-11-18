@@ -147,9 +147,11 @@ characters in the password (`@` → `%40`, `#` → `%23`, etc.). If you leave th
 `postgres://` scheme the service will fail to boot with an "Invalid request
 URI" error.
 
-Alternatively, leave `DATABASE_URL` unset and set the five `POSTGRES_*` env
-vars from the database's *Connections* tab; the app builds the async URL
-itself. Setting `DATABASE_URL` takes precedence.
+`render.yaml` does not define `POSTGRES_*` env vars, so set `DATABASE_URL`
+explicitly. The `POSTGRES_*` fallback exists for local/Docker runs only.
+Use a pgvector-capable database (a Neon free database works); the backend
+runs `CREATE EXTENSION IF NOT EXISTS vector` on startup and `/health` now
+returns **503** if that fails, so a broken database is detected immediately.
 
 ### Step 4 — verify the deployments
 
@@ -186,6 +188,34 @@ frontend. Cold starts plus model download make the first ingestion slow — let
 it run to completion and watch backend logs.
 
 ---
+
+## 2b. Vercel frontend + Render backend (recommended split)
+
+The user's chosen topology is **backend on Render, frontend on Vercel**. The
+included `vercel.json` configures the Vite build and SPA rewrites.
+
+1. Push the repo to GitHub (user-side step).
+2. In Vercel, **Add New → Project**, import the repository. Vercel reads
+   `vercel.json`: `rootDirectory = frontend`, `npm run build`, output `dist`.
+3. Add the environment variable `VITE_API_BASE_URL` = the public Render backend
+   URL (e.g. `https://darglobal-wasalt-backend.onrender.com`). It is baked into
+   the JS bundle at build time, so **redeploy after changing it**.
+4. Deploy, then copy the Vercel URL (e.g. `https://your-app.vercel.app`).
+5. In Render → backend service → Environment, set `ALLOWED_ORIGINS` to the exact
+   Vercel origin (`https://your-app.vercel.app`, no trailing slash) and set
+   `LLM_HTTP_REFERER` to the same value. Redeploy the backend, otherwise the
+   browser will be blocked by CORS.
+6. Verify from an external network:
+
+```bash
+curl -s https://<backend>.onrender.com/health
+curl -s -H 'Content-Type: application/json' \
+  -d '{"message":"Show me apartments in Riyadh"}' \
+  https://<backend>.onrender.com/api/v1/chat | head -c 500
+```
+
+The API docs are at `https://<backend>.onrender.com/docs`. The frontend needs no
+server-side secrets; the admin key and LLM key stay only on Render.
 
 ## 3. Environment variable reference
 

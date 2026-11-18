@@ -5,9 +5,11 @@ DarGlobal and Wasalt real-estate information. It is **not** a generic chatbot:
 answers come with source filters, property cards, structured comparisons,
 clickable citations and explicit "unknown" behaviour.
 
-> **Status:** fully implemented and tested locally against PostgreSQL 16/17 +
-> pgvector. Public deployment is configured via `render.yaml` but must be executed
-> from the assignment owner's own Render account (see `docs/DEPLOYMENT.md`).
+> **Status:** fully implemented, containerized, security-tested and running
+> locally (Docker Compose: frontend `:8080`, backend `:8000`, DB + pgvector).
+> Public deployment (backend on Render, frontend on Vercel) is configured via
+> `render.yaml` / `vercel.json` but must be executed from the assignment owner's
+> own accounts (see `docs/DEPLOYMENT.md`).
 
 ---
 
@@ -215,8 +217,9 @@ docker compose up --build
 - API docs: http://localhost:8000/docs
 - Postgres data persists in the named volume `postgres_data`.
 
-Docker is not installed on the build machine, so images were not built there;
-Dockerfiles and Compose were statically validated. See `docs/DEPLOYMENT.md`.
+All images were built and the stack was verified locally with `docker compose up
+--build`; ingestion produced 57 records and the frontend served the chat UI.
+Use `./scripts/docker` if the Docker CLI is not on `PATH`. See `docs/DEPLOYMENT.md`.
 
 ---
 
@@ -274,11 +277,13 @@ and live hybrid retrieval with source/filter isolation. Results:
 - Wasalt is a 28-listing snapshot; daily-rental prices were not rendered, so they
   are `null`.
 - Rate limiting is per-process in memory; a multi-instance deployment needs a
-  shared store (documented in `docs/DEPLOYMENT.md`).
+  shared store (documented in `docs/DEPLOYMENT.md`). Proxy headers are deliberately
+  not trusted to avoid `X-Forwarded-For` spoofing.
 - Render free-tier Postgres may not support pgvector; use an external pgvector
   database (e.g. Neon) via `DATABASE_URL` if needed.
-- No LLM key on the build machine, so final answer quality was verified by prompt
-  and retrieval tests rather than live generation.
+- Final answer quality was verified with a real OpenRouter key; the configured
+  default is `openai/gpt-4o-mini`, which is not necessarily free — change
+  `LLM_MODEL` to a free OpenRouter model if you want zero generation cost.
 
 ## 15. Future improvements
 

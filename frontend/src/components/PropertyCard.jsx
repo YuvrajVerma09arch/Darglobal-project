@@ -9,6 +9,9 @@ export default function PropertyCard({ record }) {
   const price = formatPrice(record?.price, record?.currency);
   const area = formatArea(record?.area, record?.area_unit);
   const url = record?.source_url || record?.url;
+  const projectStatus = record?.project_status
+    ? String(record.project_status).replace(/[_-]+/g, ' ').trim()
+    : '';
 
   const facts = [
     record?.bedrooms ? { icon: BedDouble, text: `${record.bedrooms} bd` } : null,
@@ -28,10 +31,17 @@ export default function PropertyCard({ record }) {
         )}
       </div>
       <div className="property-card-body">
-        <SourceBadge source={record?.source} />
+        <div className="property-badges">
+          <SourceBadge source={record?.source} />
+          {projectStatus ? <span className="property-status">{projectStatus}</span> : null}
+        </div>
         <h4 className="property-title">{record?.title || 'Untitled property'}</h4>
         {record?.location && <p className="property-location">{record.location}</p>}
-        {price && <p className="property-price">{price}</p>}
+        {price ? (
+          <p className="property-price">{price}</p>
+        ) : (
+          <p className="property-price property-price-na">Price on request</p>
+        )}
         {facts.length > 0 && (
           <div className="property-facts">
             {facts.map(({ icon: Icon, text }) => (

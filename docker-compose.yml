@@ -32,6 +32,9 @@ services:
       # .env was copied from somewhere else with a different host value.
       POSTGRES_HOST: db
       PORT: "8000"
+      # DATABASE_URL from .env may point at localhost for host-side runs; the
+      # compose service must always use the `db` hostname instead.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-darglobal}:${POSTGRES_PASSWORD:-change-me}@db:5432/${POSTGRES_DB:-realestate_ai}
     depends_on:
       db:
         condition: service_healthy
@@ -39,7 +42,12 @@ services:
       # Persists scraped data and the fastembed model cache across rebuilds.
       - ./data:/app/data
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   frontend:
     build:
@@ -52,7 +60,12 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
 volumes:
   postgres_data:

@@ -44,6 +44,7 @@ export default function App() {
 
         <ErrorBanner
           message={chat.error}
+          detail={chat.errorDetail}
           onRetry={chat.handleRetry}
           onDismiss={() => chat.setError(null)}
         />
@@ -53,6 +54,9 @@ export default function App() {
           scrollRef={chat.scrollRef}
           onScroll={chat.handleScroll}
           onExample={openExample}
+          isStreaming={chat.isStreaming}
+          dataAsOf={chat.dataAsOf}
+          onRetry={chat.handleRetry}
         />
 
         <div className="composer-area">

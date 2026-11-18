@@ -40,12 +40,15 @@ function extractDetail(payload, fallback) {
 
 async function readError(response) {
   const fallback = `Request failed (${response.status})`;
+  let error;
   try {
     const payload = await response.json();
-    return new Error(extractDetail(payload, fallback));
+    error = new Error(extractDetail(payload, fallback));
   } catch {
-    return new Error(fallback);
+    error = new Error(fallback);
   }
+  error.status = response.status;
+  return error;
 }
 
 /**

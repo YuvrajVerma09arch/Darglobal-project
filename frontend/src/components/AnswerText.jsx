@@ -2,8 +2,9 @@
  * Renders plain answer text. `[n]` markers become small superscript links that
  * jump to the matching citation row. No HTML is ever injected.
  */
-export default function AnswerText({ text }) {
+export default function AnswerText({ text, messageId }) {
   if (!text) return null;
+  const anchorFor = (number) => `${messageId}-citation-${number}`;
 
   const nodes = [];
   const marker = /\[(\d+)\]/g;
@@ -19,7 +20,7 @@ export default function AnswerText({ text }) {
     nodes.push(
       <a
         key={key++}
-        href={`#citation-${number}`}
+        href={`#${anchorFor(number)}`}
         className="citation-marker"
         aria-label={`Go to source ${number}`}
       >

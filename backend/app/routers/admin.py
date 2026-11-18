@@ -26,11 +26,12 @@ class IngestRequest(BaseModel):
 
 async def verify_admin(x_admin_key: str = Header(default="")) -> None:
     expected = settings.admin_api_key
-    if (
-        not expected
-        or expected == "replace-with-a-long-random-value"
-        or not hmac.compare_digest(x_admin_key, expected)
-    ):
+    try:
+        valid = bool(expected) and hmac.compare_digest(x_admin_key, expected)
+    except (TypeError, ValueError):
+        # Non-ASCII header values can make compare_digest raise; never 500 here.
+        valid = False
+    if not valid or expected == "replace-with-a-long-random-value":
         logger.warning("admin_auth_rejected")
         raise HTTPException(status_code=401, detail="Invalid admin key")
 

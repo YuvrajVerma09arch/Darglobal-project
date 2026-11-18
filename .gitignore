@@ -22,8 +22,12 @@ build/
 # Runtime data (raw snapshots are reproducible, ignored by default)
 data/raw/*
 !data/raw/.gitkeep
+# Committed real snapshots are required for a clean-clone deployment.
+!data/raw/*.jsonl
 data/processed/*
 !data/processed/.gitkeep
+# Local model cache downloaded by fastembed at runtime — never commit it.
+data/fastembed/
 *.log
 
 # OS / editor

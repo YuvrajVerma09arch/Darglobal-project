@@ -5,6 +5,10 @@ let counter = 0;
 const uid = () => `msg-${Date.now()}-${counter++}`;
 const EMPTY_FILTERS = { location: '', property_type: '', bedrooms: '', max_price: '' };
 
+const RATE_LIMIT_MESSAGE = 'Too many requests — wait a moment, then retry.';
+const isRateLimit = (error, detail) =>
+  error?.status === 429 || /\b429\b|too many requests/i.test(String(detail || ''));
+
 /** Owns all conversation state, streaming, health and scroll behaviour. */
 export default function useChat() {
   const [messages, setMessages] = useState([]);
@@ -12,6 +16,7 @@ export default function useChat() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState(null);
+  const [errorDetail, setErrorDetail] = useState(null);
   const [sourceFilter, setSourceFilter] = useState('both');
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [status, setStatus] = useState({ state: 'checking' });
@@ -57,6 +62,7 @@ export default function useChat() {
       pinnedRef.current = true;
       setIsStreaming(true);
       setError(null);
+      setErrorDetail(null);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -70,6 +76,7 @@ export default function useChat() {
       };
 
       const applyDone = (data) => {
+        const messageDataAsOf = data?.data_as_of || data?.dataAsOf || null;
         setMessages((prev) =>
           prev.map((message) =>
             message.id === assistantId
@@ -78,13 +85,15 @@ export default function useChat() {
                   text: typeof data?.answer === 'string' ? data.answer : message.text,
                   citations: Array.isArray(data?.citations) ? data.citations : [],
                   records: Array.isArray(data?.records) ? data.records : [],
+                  warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+                  dataAsOf: messageDataAsOf,
                   streaming: false,
                 }
               : message,
           ),
         );
         if (data?.conversation_id) setConversationId(data.conversation_id);
-        if (data?.data_as_of) setDataAsOf(data.data_as_of);
+        if (messageDataAsOf) setDataAsOf(messageDataAsOf);
       };
 
       try {
@@ -101,12 +110,15 @@ export default function useChat() {
           );
         } else {
           const detail = err.message || 'The assistant could not complete the request.';
+          const friendly = isRateLimit(err, detail) ? RATE_LIMIT_MESSAGE : detail;
+          console.error('Chat request failed:', detail);
           setMessages((prev) =>
             prev.map((message) =>
-              message.id === assistantId ? { ...message, streaming: false, error: detail } : message,
+              message.id === assistantId ? { ...message, streaming: false, error: friendly } : message,
             ),
           );
-          setError(detail);
+          setError(friendly);
+          setErrorDetail(detail);
         }
       } finally {
         if (abortRef.current === controller) abortRef.current = null;
@@ -139,6 +151,7 @@ export default function useChat() {
       return next;
     });
     setError(null);
+    setErrorDetail(null);
     runStream(lastUser.text);
   }, [isStreaming, messages, runStream]);
 
@@ -150,6 +163,7 @@ export default function useChat() {
     setConversationId(null);
     setInput('');
     setError(null);
+    setErrorDetail(null);
     pinnedRef.current = true;
   }, []);
 
@@ -163,6 +177,7 @@ export default function useChat() {
     setInput,
     isStreaming,
     error,
+    errorDetail,
     setError,
     sourceFilter,
     setSourceFilter,

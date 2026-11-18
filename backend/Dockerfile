@@ -64,6 +64,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
     CMD python -c "import os,sys,urllib.request; p=os.environ.get('PORT','8000'); sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:'+p+'/health', timeout=4).status == 200 else 1)"
 
 # `exec` keeps uvicorn as PID 1 so SIGTERM is handled for graceful shutdown.
-# --forwarded-allow-ips '*' is appropriate behind Render's TLS-terminating proxy
-# (rate limiting needs the real client IP from X-Forwarded-For).
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-8000}\" --proxy-headers --forwarded-allow-ips '*'"]
+# IMPORTANT: do NOT enable --proxy-headers with a wildcard allow-list here.
+# It would let any client spoof X-Forwarded-For and get a fresh rate-limit
+# bucket on every request. See docs/DEPLOYMENT.md for the multi-instance note.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port \"${PORT:-8000}\""]
