@@ -26,20 +26,24 @@ export default function useChat() {
   const scrollRef = useRef(null);
   const pinnedRef = useRef(true);
 
+  const checkHealth = useCallback(async (signal) => {
+    setStatus({ state: 'checking' });
+    try {
+      const data = await fetchHealth(signal);
+      const healthy = data?.status === 'ok';
+      const databaseReady = !data?.database || data.database === 'connected';
+      setStatus({ state: healthy && databaseReady ? 'connected' : 'limited' });
+      if (data?.last_ingest_at) setDataAsOf(data.last_ingest_at);
+    } catch (err) {
+      if (err.name !== 'AbortError') setStatus({ state: 'offline' });
+    }
+  }, []);
+
   useEffect(() => {
     const controller = new AbortController();
-    fetchHealth(controller.signal)
-      .then((data) => {
-        const healthy = data?.status === 'ok';
-        const databaseReady = !data?.database || data.database === 'connected';
-        setStatus({ state: healthy && databaseReady ? 'connected' : 'limited' });
-        if (data?.last_ingest_at) setDataAsOf(data.last_ingest_at);
-      })
-      .catch((err) => {
-        if (err.name !== 'AbortError') setStatus({ state: 'offline' });
-      });
+    checkHealth(controller.signal);
     return () => controller.abort();
-  }, []);
+  }, [checkHealth]);
 
   useEffect(() => {
     if (!pinnedRef.current || !scrollRef.current) return;
@@ -184,6 +188,7 @@ export default function useChat() {
     filters,
     handleFilterChange,
     status,
+    checkHealth,
     dataAsOf,
     scrollRef,
     handleScroll,

@@ -9,17 +9,32 @@ export default function FiltersBar({ sourceFilter, onSourceChange, filters, onFi
 
   return (
     <section className={`filters-bar ${isOpen ? 'is-open' : ''}`} aria-label="Search filters">
-      <button
-        type="button"
-        className="filters-toggle"
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        aria-controls="filters-grid"
-      >
-        <SlidersHorizontal size={14} aria-hidden="true" />
-        {!isOpen && activeCount ? `Filters · ${activeCount} active` : 'Filters'}
-        <ChevronDown size={14} className="filters-chevron" aria-hidden="true" />
-      </button>
+      <div className="filters-head">
+        <button
+          type="button"
+          className="filters-toggle"
+          onClick={onToggle}
+          aria-expanded={isOpen}
+          aria-controls="filters-grid"
+        >
+          <SlidersHorizontal size={14} aria-hidden="true" />
+          {!isOpen && activeCount ? `Filters · ${activeCount} active` : 'Filters'}
+          <ChevronDown size={14} className="filters-chevron" aria-hidden="true" />
+        </button>
+        {activeCount ? (
+          <button
+            type="button"
+            className="filters-clear"
+            onClick={() => {
+              Object.keys(filters || {}).forEach((key) => onFilterChange(key, ''));
+              onSourceChange('both');
+            }}
+            title="Reset all filters"
+          >
+            Clear filters
+          </button>
+        ) : null}
+      </div>
 
       <div className="filters-grid" id="filters-grid">
         <div className="field">

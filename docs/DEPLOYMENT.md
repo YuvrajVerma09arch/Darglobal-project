@@ -41,7 +41,8 @@ If `.env` already exists, the script refuses to overwrite it.
 ### Step 2 — set the LLM key
 
 Edit `.env` and replace `LLM_API_KEY=replace-with-your-openrouter-key` with a
-real key. Everything except chat works without it.
+real key. Everything except chat works without it. Optionally set
+`GROQ_API_KEY` as an automatic fallback provider.
 
 ### Step 3 — build and start
 
@@ -245,6 +246,10 @@ Render routes to the right container port.
 | `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | same | |
 | `LLM_MODEL` | `openai/gpt-4o-mini` | same | |
 | `LLM_API_KEY` | your key | **secret** (dashboard) | Required for chat only |
+| `GROQ_API_KEY` | your key | **secret** (dashboard) | Optional fallback when OpenRouter fails |
+| `LLM_FALLBACK_PROVIDER` | `groq` | `render.yaml` | Fallback provider name |
+| `LLM_FALLBACK_BASE_URL` | `https://api.groq.com/openai/v1` | `render.yaml` | Fallback endpoint |
+| `LLM_FALLBACK_MODEL` | `openai/gpt-oss-120b` | `render.yaml` | Fallback model |
 | `LLM_TEMPERATURE` | `0.2` | `0.2` | |
 | `LLM_MAX_TOKENS` | `900` | `900` | |
 | `LLM_TIMEOUT_SECONDS` | `60` | `60` | |

@@ -1,7 +1,13 @@
-"""Provider-agnostic LLM client (OpenAI-compatible chat completions API).
+"""Provider-agnostic LLM client with automatic fallback.
 
-OpenRouter is the default base URL, but any OpenAI / Gemini / Anthropic-compatible
-endpoint (or a local model server exposing the same API) works by changing env vars.
+Primary: OpenRouter (OpenAI-compatible). Fallback: Groq (or any other
+OpenAI-compatible endpoint configured via the LLM_FALLBACK_* env vars).
+
+If the primary call fails — rate limit, exhausted credits, timeout, 5xx — the
+client transparently retries the same grounded prompt on the fallback provider.
+If a stream already emitted tokens before failing, we do not silently switch
+providers mid-answer (that would mix two models in one response); the error is
+surfaced instead.
 """
 
 from __future__ import annotations
@@ -23,71 +29,129 @@ class LLMUnavailableError(RuntimeError):
 
 class LLMClient:
     def __init__(self) -> None:
-        self._client: Any = None
+        self._clients: dict[str, Any] = {}
         self._lock = asyncio.Lock()
         self._semaphore = asyncio.Semaphore(settings.llm_max_concurrency)
 
-    async def _ensure(self) -> Any:
-        if not settings.is_llm_configured:
-            raise LLMUnavailableError("LLM_API_KEY is not configured")
-        if self._client is None:
-            async with self._lock:
-                if self._client is None:
-                    from openai import AsyncOpenAI
+    def _providers(self) -> list[dict[str, Any]]:
+        providers: list[dict[str, Any]] = []
+        key = (settings.llm_api_key or "").strip()
+        if key and key != "replace-with-your-openrouter-key":
+            providers.append(
+                {
+                    "name": settings.llm_provider,
+                    "api_key": key,
+                    "base_url": settings.llm_base_url,
+                    "model": settings.llm_model,
+                    "referer": settings.llm_http_referer,
+                }
+            )
+        if settings.fallback_api_key:
+            providers.append(
+                {
+                    "name": settings.llm_fallback_provider,
+                    "api_key": settings.fallback_api_key,
+                    "base_url": settings.llm_fallback_base_url,
+                    "model": settings.llm_fallback_model,
+                    "referer": None,
+                }
+            )
+        return providers
 
-                    self._client = AsyncOpenAI(
-                        api_key=settings.llm_api_key,
-                        base_url=settings.llm_base_url,
-                        timeout=settings.llm_timeout_seconds,
-                        max_retries=1,
-                    )
-                    logger.info(
-                        "llm_client_ready",
-                        extra={"provider": settings.llm_provider, "model": settings.llm_model},
-                    )
-        return self._client
+    async def _client_for(self, provider: dict[str, Any]) -> Any:
+        name = provider["name"]
+        if name in self._clients:
+            return self._clients[name]
+        async with self._lock:
+            if name not in self._clients:
+                from openai import AsyncOpenAI
 
-    def _headers(self) -> dict[str, str]:
+                self._clients[name] = AsyncOpenAI(
+                    api_key=provider["api_key"],
+                    base_url=provider["base_url"],
+                    timeout=settings.llm_timeout_seconds,
+                    max_retries=1,
+                )
+                logger.info(
+                    "llm_provider_ready",
+                    extra={"provider": name, "model": provider["model"]},
+                )
+        return self._clients[name]
+
+    @staticmethod
+    def _kwargs(provider: dict[str, Any], messages: list[dict[str, str]], stream: bool) -> dict[str, Any]:
+        headers = (
+            {"HTTP-Referer": provider["referer"], "X-Title": settings.llm_app_name}
+            if provider.get("referer")
+            else {}
+        )
         return {
-            "HTTP-Referer": settings.llm_http_referer,
-            "X-Title": settings.llm_app_name,
-        }
-
-    def _kwargs(self, messages: list[dict[str, str]], stream: bool) -> dict[str, Any]:
-        return {
-            "model": settings.llm_model,
+            "model": provider["model"],
             "messages": messages,
             "temperature": settings.llm_temperature,
             "max_tokens": settings.llm_max_tokens,
             "stream": stream,
-            "extra_headers": self._headers(),
+            "extra_headers": headers,
         }
 
     async def acomplete(self, messages: list[dict[str, str]]) -> str:
-        client = await self._ensure()
-        async with self._semaphore:
+        providers = self._providers()
+        if not providers:
+            raise LLMUnavailableError("No LLM provider is configured")
+        for provider in providers:
             try:
-                response = await client.chat.completions.create(**self._kwargs(messages, False))
+                client = await self._client_for(provider)
+                async with self._semaphore:
+                    response = await client.chat.completions.create(
+                        **self._kwargs(provider, messages, False)
+                    )
+                content = (response.choices[0].message.content or "").strip()
+                if content:
+                    return content
+                logger.warning("llm_empty_response", extra={"provider": provider["name"]})
             except Exception as exc:
-                logger.exception("llm_completion_failed", extra={"error": str(exc)[:200]})
-                raise LLMUnavailableError("The language model could not be reached") from exc
-        content = response.choices[0].message.content or ""
-        return content.strip()
+                logger.warning(
+                    "llm_provider_failed",
+                    extra={"provider": provider["name"], "error": str(exc)[:200]},
+                )
+        raise LLMUnavailableError("All configured LLM providers failed")
 
     async def astream(self, messages: list[dict[str, str]]) -> AsyncIterator[str]:
-        client = await self._ensure()
-        async with self._semaphore:
+        providers = self._providers()
+        if not providers:
+            raise LLMUnavailableError("No LLM provider is configured")
+        for provider in providers:
+            emitted = 0
             try:
-                stream = await client.chat.completions.create(**self._kwargs(messages, True))
-                async for chunk in stream:
-                    if not chunk.choices:
-                        continue
-                    delta = chunk.choices[0].delta.content
-                    if delta:
-                        yield delta
+                client = await self._client_for(provider)
+                async with self._semaphore:
+                    stream = await client.chat.completions.create(
+                        **self._kwargs(provider, messages, True)
+                    )
+                    async for chunk in stream:
+                        if not chunk.choices:
+                            continue
+                        delta = chunk.choices[0].delta.content
+                        if delta:
+                            emitted += 1
+                            yield delta
+                if emitted:
+                    return
+                logger.warning("llm_empty_stream", extra={"provider": provider["name"]})
             except Exception as exc:
-                logger.exception("llm_stream_failed", extra={"error": str(exc)[:200]})
-                raise LLMUnavailableError("The language model could not be reached") from exc
+                if emitted:
+                    # Never switch providers after the UI has already received
+                    # tokens from this one.
+                    logger.warning(
+                        "llm_stream_interrupted",
+                        extra={"provider": provider["name"], "error": str(exc)[:200]},
+                    )
+                    raise LLMUnavailableError("The language model stream was interrupted") from exc
+                logger.warning(
+                    "llm_provider_failed",
+                    extra={"provider": provider["name"], "error": str(exc)[:200]},
+                )
+        raise LLMUnavailableError("All configured LLM providers failed")
 
 
 llm_client = LLMClient()

@@ -47,7 +47,8 @@ All agents MUST read it before writing code. Do not change it without telling th
 - [x] Docker Compose FULLY VERIFIED: `./scripts/docker compose up --build` (frontend nginx temp/pid bug fixed)
 - [x] Real OpenRouter generation verified with grounded `[n]` citations and plain-text answers
 - [x] Authorized security review (2 static agents + 19 dynamic exploit checks): 19/19 passed after patches
-- [x] Tests: 40 passing including live-DB integration
+- [x] Tests: 42 passing incl. live-DB; OpenRouter→Groq fallback verified with an intentionally invalid primary key
+- [x] Logo mark fixed (flex layout keeps D×W inside the 38px box); status chip now rechecks health; added working "Clear filters" button
 - [x] Documentation: README, architecture, API contract, data report, access notes, Render+Vercel deployment guide, QA results, screenshots
 - [ ] **Deployment: user action** — user connects GitHub and deploys backend on Render, frontend on Vercel using `render.yaml` / `vercel.json`. Set `VITE_API_BASE_URL` in Vercel and `ALLOWED_ORIGINS` in Render to the real Vercel URL, set `LLM_API_KEY`, run `/api/v1/admin/ingest`, then smoke-test externally.
 

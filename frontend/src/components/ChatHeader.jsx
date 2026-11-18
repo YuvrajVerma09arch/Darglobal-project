@@ -1,7 +1,7 @@
 import { Eraser, Menu } from 'lucide-react';
 import StatusBadge from './StatusBadge.jsx';
 
-export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu }) {
+export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu, onRefreshStatus }) {
   return (
     <header className="chat-header">
       <div className="chat-header-left">
@@ -14,7 +14,7 @@ export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu })
         </div>
       </div>
       <div className="chat-header-actions">
-        <StatusBadge status={status} />
+        <StatusBadge status={status} onRefresh={onRefreshStatus} />
         <button
           type="button"
           className="clear-btn"

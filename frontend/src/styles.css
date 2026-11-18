@@ -135,8 +135,12 @@ p {
   flex: 0 0 auto;
   width: 38px;
   height: 38px;
-  display: grid;
-  place-items: center;
+  /* flex keeps D × W on one line inside the box; grid made each text node a
+     separate row, which rendered the mark vertically outside the square. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
   border: 1px solid var(--brass);
   border-radius: 2px;
   color: var(--brass-deep);
@@ -379,6 +383,13 @@ p {
   font-size: 11px;
   font-weight: 600;
   white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.status-badge:hover {
+  border-color: var(--brass-line);
+  background: #fffdf9;
 }
 
 .status-dot {
@@ -1133,8 +1144,27 @@ p {
   margin-bottom: var(--space-3);
 }
 
+.filters-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
 .filters-toggle {
   display: none;
+}
+
+.filters-clear {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  color: var(--brass-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .filters-grid {

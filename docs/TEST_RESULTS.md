@@ -94,6 +94,13 @@ ran 19 exploit attempts (admin auth incl. non-ASCII key, CORS reflection, SQLi,
 path traversal, XFF spoofing, oversized input, invalid enums, prompt injection,
 conversation takeover, SSE contract) — **19/19 passed**.
 
+### LLM fallback verification
+- With an intentionally invalid `LLM_API_KEY`, `acomplete()` and `astream()`
+  both succeeded using Groq (`openai/gpt-oss-120b`) — fallback chain confirmed.
+- The initially configured Groq model `llama-3.3-70b-versatile` returned 404
+  `model_not_found`; the default was changed to a model the account exposes.
+- Offline unit tests cover provider-chain construction and fallback-on-failure.
+
 Additional final verification after hardening:
 - `docker compose up --build` — all three images built, db/backend healthy,
   frontend container initially failed on nginx temp/pid paths and was fixed

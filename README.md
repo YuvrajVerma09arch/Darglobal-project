@@ -150,6 +150,21 @@ LLM_MODEL=openai/gpt-4o-mini
 LLM_API_KEY=sk-or-v1-...
 ```
 
+**Automatic fallback:** if the primary provider fails (rate limit, exhausted
+credits, timeout, 5xx), the same grounded prompt is retried on a second
+OpenAI-compatible provider — Groq by default:
+
+```bash
+LLM_FALLBACK_PROVIDER=groq
+LLM_FALLBACK_BASE_URL=https://api.groq.com/openai/v1
+LLM_FALLBACK_MODEL=openai/gpt-oss-120b
+GROQ_API_KEY=...
+```
+
+`LLM_FALLBACK_API_KEY` can be used instead of `GROQ_API_KEY` for a generic
+second provider. The fallback never switches mid-stream: if tokens were already
+sent, the error is surfaced rather than mixing two models in one answer.
+
 Switch to another provider by changing `LLM_BASE_URL` / `LLM_MODEL` /
 `LLM_API_KEY`. OpenAI-native: `https://api.openai.com/v1` + `gpt-4o-mini`.
 Gemini OpenAI-compat: `https://generativelanguage.googleapis.com/v1beta/openai/`

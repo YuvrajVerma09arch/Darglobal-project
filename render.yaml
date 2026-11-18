@@ -94,6 +94,16 @@ services:
         value: openai/gpt-4o-mini
       - key: LLM_API_KEY
         sync: false
+
+      # Automatic fallback if OpenRouter runs out of credits or errors.
+      - key: LLM_FALLBACK_PROVIDER
+        value: groq
+      - key: LLM_FALLBACK_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_FALLBACK_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_API_KEY
+        sync: false
       - key: LLM_TEMPERATURE
         value: "0.2"
       - key: LLM_MAX_TOKENS

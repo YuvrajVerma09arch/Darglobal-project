@@ -58,6 +58,15 @@ class Settings(BaseSettings):
     llm_app_name: str = "darglobal-wasalt-ai"
     llm_max_concurrency: int = 4
 
+    # Fallback provider (Groq by default). Any OpenAI-compatible endpoint works.
+    llm_fallback_provider: str = "groq"
+    llm_fallback_api_key: str = ""
+    llm_fallback_base_url: str = "https://api.groq.com/openai/v1"
+    llm_fallback_model: str = "openai/gpt-oss-120b"
+    # Convenience alias: GROQ_API_KEY is read automatically if the generic
+    # LLM_FALLBACK_API_KEY is not set.
+    groq_api_key: str = ""
+
     # Retrieval
     retrieval_top_k: int = 8
     retrieval_candidate_k: int = 24
@@ -95,9 +104,14 @@ class Settings(BaseSettings):
         )
 
     @property
+    def fallback_api_key(self) -> str:
+        return (self.llm_fallback_api_key or self.groq_api_key or "").strip()
+
+    @property
     def is_llm_configured(self) -> bool:
         key = (self.llm_api_key or "").strip()
-        return bool(key) and key != "replace-with-your-openrouter-key"
+        primary = bool(key) and key != "replace-with-your-openrouter-key"
+        return primary or bool(self.fallback_api_key)
 
 
 @lru_cache

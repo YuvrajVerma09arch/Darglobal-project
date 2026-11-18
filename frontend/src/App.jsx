@@ -40,6 +40,7 @@ export default function App() {
           hasMessages={chat.messages.length > 0}
           onClear={clearChat}
           onOpenMenu={() => setSidebarOpen(true)}
+          onRefreshStatus={() => chat.checkHealth()}
         />
 
         <ErrorBanner
