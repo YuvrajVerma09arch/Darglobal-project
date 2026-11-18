@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health")
+@router.api_route("/health", methods=["GET", "HEAD"])
 async def health(session: AsyncSession = Depends(get_db)):
     try:
         await session.execute(text("SELECT 1"))

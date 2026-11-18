@@ -32,6 +32,13 @@ def test_health_returns_structured_payload():
             assert body["status"] == "degraded"
 
 
+def test_health_supports_head_for_uptime_monitors():
+    with client() as http:
+        response = http.head("/health")
+        assert response.status_code in {200, 503}
+        assert response.headers.get("allow", "").find("GET") >= 0 or response.status_code == 200
+
+
 def test_chat_rejects_empty_message():
     with client() as http:
         response = http.post("/api/v1/chat", json={"message": ""})

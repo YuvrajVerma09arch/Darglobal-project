@@ -72,7 +72,7 @@ async def unhandled_exception(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
-@app.get("/", tags=["health"])
+@app.api_route("/", methods=["GET", "HEAD"], tags=["health"])
 async def root():
     return {
         "name": "DarGlobal & Wasalt Real Estate Intelligence Assistant",
