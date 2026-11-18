@@ -1,0 +1,58 @@
+# ---------------------------------------------------------------------------
+# Local production-like stack. Requires a .env (run scripts/bootstrap_local.sh).
+# Backend build context / frontend build context are the repository root.
+# No secrets are hardcoded here: everything comes from .env / shell defaults.
+# ---------------------------------------------------------------------------
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-darglobal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${POSTGRES_DB:-realestate_ai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-darglobal} -d ${POSTGRES_DB:-realestate_ai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Guarantee the containerised app reaches the compose database even if
+      # .env was copied from somewhere else with a different host value.
+      POSTGRES_HOST: db
+      PORT: "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Persists scraped data and the fastembed model cache across rebuilds.
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        # Baked into the JS bundle at build time. Not a secret.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:

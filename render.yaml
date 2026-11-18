@@ -1,0 +1,125 @@
+# ---------------------------------------------------------------------------
+# Render Blueprint — DarGlobal & Wasalt Real Estate Intelligence Assistant
+#
+# Deploy manually from the Render dashboard: New > Blueprint > connect the
+# repository. The final public URLs are created in YOUR Render account and
+# follow the service names below (e.g. darglobal-wasalt-backend.onrender.com).
+#
+# IMPORTANT — pgvector:
+#   The backend runs `CREATE EXTENSION IF NOT EXISTS vector` on startup, so the
+#   database user must be permitted to create extensions. Render's managed
+#   Postgres does not always allow this. If startup fails with
+#   "extension \"vector\" is not available" / "must be superuser", use an
+#   external pgvector-capable Postgres instead (Neon's free tier works well)
+#   and paste its connection string into DATABASE_URL (see notes below).
+#   The bundled `db` service in docker-compose.yml uses pgvector/pgvector:pg16,
+#   so local development always has the extension.
+#
+# IMPORTANT — DATABASE_URL scheme:
+#   Render-copyable connection strings start with `postgres://`. The app uses
+#   SQLAlchemy's asyncpg driver and requires `postgresql+asyncpg://`. Change
+#   the scheme before pasting the value into the DATABASE_URL env var below.
+#   URL-encode any special characters in the password (e.g. @ -> %40).
+# ---------------------------------------------------------------------------
+
+databases:
+  - name: realestate-ai-db
+    databaseName: realestate_ai
+    user: darglobal
+    plan: free # Free Postgres expires after 30 days — upgrade before production.
+    region: oregon
+
+services:
+  # ------------------------------- Backend ---------------------------------
+  - type: web
+    name: darglobal-wasalt-backend
+    runtime: docker
+    plan: free # Free web services sleep after inactivity -> slow cold starts.
+    region: oregon
+    dockerfilePath: backend/Dockerfile
+    # Both Dockerfiles COPY paths relative to the repository root.
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      # Tell Render's proxy which container port to route to. The backend
+      # image defaults to 8000 and also honours PORT at runtime.
+      - key: PORT
+        value: "8000"
+
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_V1_PREFIX
+        value: /api/v1
+
+      # Set this in the Render dashboard (sync: false keeps secrets out of the
+      # blueprint). Use `postgresql+asyncpg://...`, see the notes above.
+      - key: DATABASE_URL
+        sync: false
+
+      # Generate locally with:
+      #   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+      # Used by scripts/ingest.sh as the X-Admin-Key header.
+      - key: ADMIN_API_KEY
+        sync: false
+
+      # Must match the frontend service's public URL; update if renamed.
+      - key: ALLOWED_ORIGINS
+        value: https://darglobal-wasalt-frontend.onrender.com
+
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
+      - key: CHAT_RATE_LIMIT_PER_MINUTE
+        value: "12"
+
+      # Local embeddings: no API key required, model downloads on first run.
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: EMBEDDING_MODEL
+        value: BAAI/bge-small-en-v1.5
+      - key: EMBEDDING_DIM
+        value: "384"
+      - key: FASTEMBED_CACHE_PATH
+        value: /app/data/fastembed
+
+      # OpenRouter (OpenAI-compatible). Chat needs a real key; retrieval,
+      # stats and search work without one.
+      - key: LLM_PROVIDER
+        value: openrouter
+      - key: LLM_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: LLM_MODEL
+        value: openai/gpt-4o-mini
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_TEMPERATURE
+        value: "0.2"
+      - key: LLM_MAX_TOKENS
+        value: "900"
+      - key: LLM_TIMEOUT_SECONDS
+        value: "60"
+      - key: LLM_HTTP_REFERER
+        value: https://darglobal-wasalt-frontend.onrender.com
+      - key: LLM_APP_NAME
+        value: darglobal-wasalt-ai
+
+  # ------------------------------- Frontend --------------------------------
+  - type: web
+    name: darglobal-wasalt-frontend
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      # nginx listens on 8080 in the image; tell Render's proxy to use it.
+      - key: PORT
+        value: "8080"
+
+      # Render passes service env vars to the Docker build as build args, and
+      # frontend/Dockerfile declares ARG VITE_API_BASE_URL, so this value is
+      # baked into the JS bundle. Not a secret. Update if the backend is renamed.
+      - key: VITE_API_BASE_URL
+        value: https://darglobal-wasalt-backend.onrender.com
