@@ -120,22 +120,6 @@ services:
       - key: LLM_APP_NAME
         value: darglobal-wasalt-ai
 
-  # ------------------------------- Frontend --------------------------------
-  - type: web
-    name: darglobal-wasalt-frontend
-    runtime: docker
-    plan: free
-    region: oregon
-    dockerfilePath: frontend/Dockerfile
-    dockerContext: .
-    healthCheckPath: /health
-    envVars:
-      # nginx listens on 8080 in the image; tell Render's proxy to use it.
-      - key: PORT
-        value: "8080"
-
-      # Render passes service env vars to the Docker build as build args, and
-      # frontend/Dockerfile declares ARG VITE_API_BASE_URL, so this value is
-      # baked into the JS bundle. Not a secret. Update if the backend is renamed.
-      - key: VITE_API_BASE_URL
-        value: https://darglobal-wasalt-backend.onrender.com
+# The frontend is deployed on Vercel (see vercel.json), not on Render.
+# If an old "darglobal-wasalt-frontend" service still exists in this Render
+# account from an earlier blueprint deploy, you can simply delete it.
