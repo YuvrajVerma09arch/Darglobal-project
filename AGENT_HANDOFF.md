@@ -57,16 +57,9 @@ All agents MUST read it before writing code. Do not change it without telling th
 
 ## Commit log
 
-- `d95acd1` feat(backend): FastAPI RAG API with hybrid retrieval, ingestion and scrapers
-- `cd35075` data: add 57 attributable public records and access report
-- `5aa86d6` feat(frontend): premium real-estate chat UI with SSE, filters and property cards
-- `040839b` infra: multi-stage Docker, compose stack and Render blueprint
-- `b1083bb` docs+tests: QA results, sample dialogues, screenshots and handoff
-- `46045f7` docs: final engineering handoff state
-- `fafe557` hardening: verified Docker stack, security patches, UX polish, Vercel config
-- `49fe308` docs: note history cleanup in handoff (latest)
+- Milestones (in order): backend RAG API → 57 real records → premium frontend → Docker/Render/Vercel config → QA docs → hardening/security patches → Groq fallback + brand mark fix → access-code gate + responsive nav fix → brute-force verification.
 - All commits authored by the user's local Git identity (`Telos <telos2909@gmail.com>`).
-- Local fastembed model cache was purged from history before the first push (history is ~1.3 MB packed).
+- History was rewritten twice: once to purge an accidentally committed fastembed model cache, once to purge a local prompt-injection self-test corpus that was never meant for the assessment repo. `git log` is authoritative for current hashes.
 
 ## Notes / gotchas for the next agent
 

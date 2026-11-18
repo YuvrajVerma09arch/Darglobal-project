@@ -37,3 +37,10 @@ data/fastembed/
 
 # Docker state
 postgres_data/
+
+# Prompt-injection self-test corpus + grading key — never commit.
+# (The payloads ship in the deployed build via Vercel/nginx, but the
+# source files and the answer key must stay out of the repo.)
+frontend/public/archive/
+frontend/public/security-canaries/
+docs/PROMPT_INJECTION_TESTPLAN.md
