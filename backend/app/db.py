@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import AsyncIterator
+from urllib.parse import urlparse
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -25,6 +26,23 @@ engine = create_async_engine(
     pool_recycle=1800,
 )
 SessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+# Log only scheme/host/database — never credentials — so a bad DATABASE_URL on
+# a hosted platform is diagnosable from the logs alone.
+_db_url = urlparse(settings.sqlalchemy_url)
+logger.info(
+    "database_target_configured",
+    extra={
+        "scheme": _db_url.scheme,
+        "host": _db_url.hostname,
+        "database": _db_url.path.lstrip("/"),
+    },
+)
+if _db_url.scheme != "postgresql+asyncpg":
+    logger.error(
+        "database_url_scheme_wrong",
+        extra={"expected": "postgresql+asyncpg", "got": _db_url.scheme},
+    )
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:
