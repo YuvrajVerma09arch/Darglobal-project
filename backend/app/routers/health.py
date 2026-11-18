@@ -31,7 +31,9 @@ async def health(session: AsyncSession = Depends(get_db)):
             "last_ingest_at": last.isoformat() if last else None,
         }
     except Exception as exc:  # pragma: no cover
-        logger.error("health_check_failed", extra={"error": str(exc)[:200]})
+        from app.logging_config import redact
+
+        logger.error("health_check_failed: %s", redact(exc)[:300])
         # A degraded service must fail its platform health check instead of
         # reporting 200 forever (Render polls /health to decide restarts).
         return JSONResponse(

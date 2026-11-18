@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 
 from app import __version__
 from app.config import get_settings
-from app.logging_config import configure_logging
+from app.logging_config import configure_logging, redact
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.routers import admin, chat, health, meta, properties, search
 
@@ -29,7 +29,9 @@ async def lifespan(app: FastAPI):
         await init_db()
         logger.info("database_ready")
     except Exception as exc:
-        logger.error("database_init_failed", extra={"error": str(exc)[:200]})
+        # Render's JSON log viewer shows only `msg`, so put the redacted error
+        # in the message itself — otherwise the real cause is invisible.
+        logger.error("database_init_failed: %s", redact(exc)[:500])
     yield
     logger.info("application_stopping")
 

@@ -49,6 +49,11 @@ Keep the host, user, password, database and `?sslmode=require` unchanged:
 postgresql+asyncpg://neondb_owner:<password>@ep-xxxxxx.us-west-2.aws.neon.tech/realestate_ai?sslmode=require
 ```
 
+You can leave Neon's `?sslmode=require&channel_binding=require` exactly as-is —
+the backend strips those params and translates `sslmode=require` into asyncpg's
+`ssl=True` connect argument. (Older builds passed `sslmode` straight to asyncpg
+and crashed with `TypeError: connect() got an unexpected keyword argument 'sslmode'`.)
+
 If the password contains special characters, URL-encode them:
 `@` → `%40`, `#` → `%23`, `/` → `%2F`, `%` → `%25`, `:` → `%3A`.
 

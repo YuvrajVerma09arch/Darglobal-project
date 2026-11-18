@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from datetime import datetime, timezone
+
+
+def redact(text: object) -> str:
+    """Remove credentials from any error text before logging it."""
+    return re.sub(r"://[^:@\s]+:[^@\s]+@", "://***:***@", str(text))
 
 
 class JsonFormatter(logging.Formatter):
