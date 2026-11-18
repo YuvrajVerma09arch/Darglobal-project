@@ -201,8 +201,11 @@ The user's chosen topology is **backend on Render, frontend on Vercel**. The
 included `vercel.json` configures the Vite build and SPA rewrites.
 
 1. Push the repo to GitHub (user-side step).
-2. In Vercel, **Add New → Project**, import the repository. Vercel reads
-   `vercel.json`: `rootDirectory = frontend`, `npm run build`, output `dist`.
+2. In Vercel, **Add New → Project**, import the repository. **Leave Root
+   Directory at the repository root** — `rootDirectory` is not a valid key in
+   `vercel.json`. The committed `vercel.json` builds from the root with
+   `npm --prefix frontend install` / `npm --prefix frontend run build` and
+   outputs `frontend/dist`, plus SPA rewrites and security headers.
 3. Add the environment variable `VITE_API_BASE_URL` = the public Render backend
    URL (e.g. `https://darglobal-wasalt-backend.onrender.com`). It is baked into
    the JS bundle at build time, so **redeploy after changing it**.
