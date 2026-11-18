@@ -27,17 +27,18 @@ RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 
-# Run the whole nginx process as the unprivileged `nginx` user:
-#  - listen on 8080 (no root needed),
-#  - keep pid + all temp paths under /tmp (writable by that user).
+# Run nginx as the unprivileged `nginx` user. Writable paths live under /app,
+# NOT /tmp: Render mounts an empty tmpfs at /tmp, which deletes anything we
+# create there at build time and makes nginx fail with "mkdir() ... No such
+# file or directory" on startup.
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
-RUN sed -i -e 's|/var/cache/nginx|/tmp/nginx|g' \
-            -e 's|/var/run/nginx.pid|/tmp/nginx.pid|g' \
-            -e 's|/run/nginx.pid|/tmp/nginx.pid|g' \
+RUN sed -i -e 's|/var/cache/nginx|/app/nginx-tmp|g' \
+            -e 's|/var/run/nginx.pid|/app/nginx-tmp/nginx.pid|g' \
+            -e 's|/run/nginx.pid|/app/nginx-tmp/nginx.pid|g' \
             /etc/nginx/nginx.conf \
-    && mkdir -p /tmp/nginx/client_temp /tmp/nginx/proxy_temp \
-               /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp \
-    && chown -R nginx:nginx /tmp/nginx /usr/share/nginx/html
+    && mkdir -p /app/nginx-tmp/client_temp /app/nginx-tmp/proxy_temp \
+               /app/nginx-tmp/fastcgi_temp /app/nginx-tmp/uwsgi_temp /app/nginx-tmp/scgi_temp \
+    && chown -R nginx:nginx /app/nginx-tmp /usr/share/nginx/html
 
 COPY --from=build --chown=nginx:nginx /app/dist/ /usr/share/nginx/html/
 
