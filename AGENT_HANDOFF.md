@@ -34,28 +34,34 @@ All agents MUST read it before writing code. Do not change it without telling th
 - Subagent INFRA: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `render.yaml`, `scripts/**`, `docs/DEPLOYMENT.md`
 - Subagent RESEARCH: read-only website investigation (no files)
 
-## Current state
+## Current state (final build handoff, 2026-11-18)
 
-- [x] Requirements clarified with user
-- [x] Repo initialised at `~/Projects/darglobal-wasalt-ai`
-- [x] Skills loaded: frontend-ui-engineering, security-and-hardening
-- [x] API contract written (`docs/API_CONTRACT.md`)
-- [x] Backend scaffold: config, models, schemas, logging, db, prompts, text/query utils
-- [ ] Website research (subagent running) → results pending
-- [ ] Backend: embeddings, retrieval, LLM, RAG, routers, main — IN PROGRESS (lead)
-- [ ] Scrapers + real ingestion — lead, after research report
-- [ ] Frontend — subagent running
-- [ ] Docker + Render config — subagent running
-- [ ] Tests — lead, after backend completes
-- [ ] Documentation — lead
-- [ ] Deployment (user-side manual step)
+- [x] Requirements clarified with user (path, OpenRouter default, Render, local git, no bypass)
+- [x] Repo initialised at `~/Projects/darglobal-wasalt-ai`, 5 local commits
+- [x] Skills used: frontend-ui-engineering, security-and-hardening
+- [x] Website research completed; darglobal.com mismatch and access restrictions documented
+- [x] 57 real records ingested (29 DarGlobal archived snapshots + 28 Wasalt rendered listings)
+- [x] Backend: FastAPI, async SQLAlchemy/pgvector, hybrid retrieval, RAG, SSE, admin ingest, rate limits, security headers
+- [x] Scrapers + idempotent ingestion verified against local Postgres 17 + pgvector 0.8.7
+- [x] Frontend: React/Vite premium UI, filters, citations, property cards, streaming, responsive (browser-tested)
+- [x] Docker + Render config written and statically validated (Docker absent on this machine)
+- [x] Tests: 37 passing including live-DB integration
+- [x] Documentation: README, architecture, API contract, data collection report, access notes, deployment guide, QA results, screenshots
+- [ ] **Deployment: BLOCKED on user action** — Render account/services must be created by the user from `render.yaml`; no credentials were shared, so no public URL exists yet.
 
 ## Commit log
 
-- (pending first commit)
+- `0ca4097` feat(backend): FastAPI RAG API with hybrid retrieval, ingestion and scrapers
+- `5775351` data: add 57 attributable public records and access report
+- `bb98364` feat(frontend): premium real-estate chat UI with SSE, filters and property cards
+- `e2b4020` infra: multi-stage Docker, compose stack and Render blueprint
+- `03729b2` docs+tests: QA results, sample dialogues, screenshots and handoff
 
 ## Notes / gotchas for the next agent
 
-- `docker` is not installed: do not assume compose can be run; provide static validation (`docker compose config` cannot run here).
-- The user will add `LLM_API_KEY` later. The app must start and serve retrieval/search/stats without it; chat should return a clear configuration error if missing.
+- `docker` is not installed here; compose was never executed. Validate renders manually after install.
+- `LLM_API_KEY` must be set in Render for generated answers. Without it the API still serves retrieval, citations and property cards with a clear warning.
+- If Render managed Postgres lacks pgvector, use an external pgvector DB (e.g. Neon) and set `DATABASE_URL` to `postgresql+asyncpg://...`.
+- Raw JSONL is baked into the backend image and mounted in compose; first ingest is idempotent.
+- A user asking to "bypass security" of these sites was declined; do not revisit. Wayback + renderer + sitemaps are the legitimate sources used.
 - Keep writing this file at each milestone.
