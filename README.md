@@ -48,6 +48,10 @@ unvarnished record. **No synthetic or fabricated property data was added.**
 - Local embedding model (BGE-small via fastembed) — ingestion works before any
   API key is supplied; no property text is sent to an embedding vendor.
 - Source isolation (`darglobal` / `wasalt` / `both`) in both retrieval and UI.
+- Light/dark theme toggle in the header, persisted locally and defaulting to the
+  OS `prefers-color-scheme`.
+- Unsupported or investment-advice questions get a factual inventory of what the
+  snapshot contains plus example prompts, never a guess about returns.
 - Filter options (cities, property types, bedroom counts, max price) are derived
   from the indexed corpus via `/api/v1/stats`, so they can't offer impossible values.
 - If an exact combination still matches nothing, constraints relax progressively

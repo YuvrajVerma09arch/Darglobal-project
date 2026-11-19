@@ -4,6 +4,7 @@
 :root {
   --paper: #f7f5f0;
   --surface: #ffffff;
+  --soft-surface: #fffdf9;
   --sidebar-bg: #fbf9f5;
   --ink: #14181f;
   --slate: #5b6472;
@@ -19,6 +20,11 @@
   --danger-soft: #fbf0ee;
   --shadow-sm: 0 1px 2px rgba(20, 24, 31, 0.04), 0 2px 10px rgba(20, 24, 31, 0.03);
 
+  /* Solid-fill controls: kept separate from --ink so dark mode can invert them. */
+  --button-bg: #14181f;
+  --button-fg: #ffffff;
+  --button-hover: #2a3039;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -33,6 +39,31 @@
 
   --font-serif: Georgia, 'Times New Roman', serif;
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Dark theme — only token overrides; component rules stay identical. */
+[data-theme='dark'] {
+  --paper: #11151b;
+  --surface: #1b212a;
+  --soft-surface: #202731;
+  --sidebar-bg: #171c24;
+  --ink: #eef2f7;
+  --slate: #aeb8c6;
+  --muted: #98a2b0;
+  --brass: #c99a55;
+  --brass-deep: #dcb477;
+  --brass-text: #e0bd8b;
+  --brass-soft: #2d261b;
+  --brass-line: #54452f;
+  --sand: #262d38;
+  --hairline: #333b47;
+  --danger: #f0a69c;
+  --danger-soft: #3a2624;
+  --button-bg: #c99a55;
+  --button-fg: #15191f;
+  --button-hover: #dcb477;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.25);
+  color-scheme: dark;
 }
 
 /* ==========================================================================
@@ -147,7 +178,7 @@ p {
   font-family: var(--font-serif);
   font-size: 13px;
   letter-spacing: -0.03em;
-  background: #fffdf9;
+  background: var(--soft-surface);
 }
 
 .brand-mark span {
@@ -205,8 +236,8 @@ p {
   justify-content: center;
   gap: var(--space-2);
   height: 38px;
-  background: var(--ink);
-  color: #fff;
+  background: var(--button-bg);
+  color: var(--button-fg);
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);
   font-size: 13px;
@@ -215,7 +246,7 @@ p {
 }
 
 .new-chat-btn:hover {
-  background: #2a3039;
+  background: var(--button-hover);
 }
 
 .chip-row {
@@ -229,7 +260,7 @@ p {
   padding: 0 11px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--slate);
   font-size: 11.5px;
   font-weight: 600;
@@ -244,7 +275,7 @@ p {
 .chip.active {
   background: var(--brass);
   border-color: var(--brass);
-  color: #fff;
+  color: var(--button-fg);
 }
 
 .sidebar-examples {
@@ -380,7 +411,7 @@ p {
   padding: 0 9px;
   border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: #fff;
+  background: var(--surface);
   color: var(--slate);
   font-size: 11px;
   font-weight: 600;
@@ -391,7 +422,7 @@ p {
 
 .status-badge:hover {
   border-color: var(--brass-line);
-  background: #fffdf9;
+  background: var(--soft-surface);
 }
 
 .status-dot {
@@ -421,7 +452,7 @@ p {
   padding: 0 10px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface);
   color: var(--slate);
   font-size: 11.5px;
   font-weight: 600;
@@ -480,9 +511,9 @@ p {
   align-items: center;
   gap: 5px;
   padding: 4px 8px;
-  border: 1px solid #d9b0a9;
+  border: 1px solid var(--danger);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface);
   color: var(--danger);
   font-size: 11.5px;
   font-weight: 700;
@@ -524,8 +555,8 @@ p {
 .user-bubble {
   max-width: 72%;
   padding: 10px 14px;
-  background: var(--ink);
-  color: #f7f5f0;
+  background: var(--button-bg);
+  color: var(--button-fg);
   border-radius: var(--radius-lg) var(--radius-lg) 2px var(--radius-lg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -585,7 +616,7 @@ p {
 .citation-marker:hover {
   background: var(--brass);
   border-color: var(--brass);
-  color: #fff;
+  color: var(--button-fg);
 }
 
 .stream-caret {
@@ -788,7 +819,7 @@ p {
   height: 26px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface);
   color: var(--slate);
 }
 
@@ -850,7 +881,7 @@ p {
   padding: 0 7px;
   border: 1px solid var(--brass-line);
   border-radius: 3px;
-  background: #fffdf9;
+  background: var(--soft-surface);
   color: var(--brass-text);
   font-size: 9.5px;
   font-weight: 700;
@@ -1198,7 +1229,7 @@ p {
   padding: 0 8px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface);
   font-size: 12px;
   color: var(--ink);
 }
@@ -1219,7 +1250,7 @@ p {
   align-items: flex-end;
   gap: var(--space-2);
   padding: 7px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
@@ -1256,8 +1287,8 @@ p {
   height: 34px;
   border: 0;
   border-radius: var(--radius-sm);
-  background: var(--ink);
-  color: #fff;
+  background: var(--button-bg);
+  color: var(--button-fg);
 }
 
 .send-btn:hover:not(:disabled) {
@@ -1377,7 +1408,7 @@ p {
     padding: 0 10px;
     border: 1px solid var(--hairline);
     border-radius: var(--radius-sm);
-    background: #fff;
+    background: var(--surface);
     color: var(--slate);
     font-size: 11.5px;
     font-weight: 600;
@@ -1491,7 +1522,7 @@ p {
   padding: var(--space-6);
   border: 1px solid var(--hairline);
   border-radius: 3px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 12px 40px rgba(20, 24, 31, 0.06);
 }
 
@@ -1503,7 +1534,7 @@ p {
   border: 1px solid var(--brass);
   border-radius: 2px;
   color: var(--brass-deep);
-  background: #fffdf9;
+  background: var(--soft-surface);
 }
 
 .access-title {
@@ -1537,7 +1568,7 @@ p {
 
 .access-error {
   margin: 0;
-  color: #9b2c2c;
+  color: var(--danger);
   font-size: 12px;
 }
 
@@ -1545,8 +1576,8 @@ p {
   height: 42px;
   border: 1px solid var(--ink);
   border-radius: var(--radius-sm);
-  background: var(--ink);
-  color: #fff;
+  background: var(--button-bg);
+  color: var(--button-fg);
   font: inherit;
   font-size: 13px;
   font-weight: 600;

@@ -51,7 +51,10 @@ All agents MUST read it before writing code. Do not change it without telling th
 - [x] Optional `APP_ACCESS_CODE` gate implemented (public `/access` probe + `X-Access-Code` header); browser-verified
 - [x] Responsive hamburger/close-button bug fixed (`.icon-btn` specificity override); browser-verified at 1440px and 390px
 - [x] Honest `frontend/public/llms.txt` added (no evaluator-manipulation instructions)
-- [x] Data-driven filter options + progressive filter relaxation; plain-text output sanitisation; archived conversation history in sidebar; removed "out of scope" example. 45 tests pass including live relaxation test.
+- [x] Data-driven filter options + progressive filter relaxation; plain-text output sanitisation; archived conversation history in sidebar; removed "out of scope" example.
+- [x] Dark mode added (token overrides + header toggle, persisted, OS-preference default) and verified in browser.
+- [x] Unsupported/investment-advice questions now return a factual corpus inventory + example prompts instead of a dead end or a guessed return. 46 tests pass.
+- [x] Docker images rebuilt locally after final changes; Render backend + Vercel frontend deployed externally by user.
 - [x] Logo mark fixed (flex layout keeps D×W inside the 38px box); status chip now rechecks health; added working "Clear filters" button
 - [x] Documentation: README, architecture, API contract, data report, access notes, Render+Vercel deployment guide, QA results, screenshots
 - [ ] **Deployment: user action** — user connects GitHub and deploys backend on Render, frontend on Vercel using `render.yaml` / `vercel.json`. Set `VITE_API_BASE_URL` in Vercel and `ALLOWED_ORIGINS` in Render to the real Vercel URL, set `LLM_API_KEY`, run `/api/v1/admin/ingest`, then smoke-test externally.

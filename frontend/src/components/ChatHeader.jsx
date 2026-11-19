@@ -1,7 +1,7 @@
-import { Eraser, Menu } from 'lucide-react';
+import { Eraser, Menu, Moon, Sun } from 'lucide-react';
 import StatusBadge from './StatusBadge.jsx';
 
-export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu, onRefreshStatus }) {
+export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu, onRefreshStatus, theme, onToggleTheme }) {
   return (
     <header className="chat-header">
       <div className="chat-header-left">
@@ -14,6 +14,15 @@ export default function ChatHeader({ status, hasMessages, onClear, onOpenMenu, o
         </div>
       </div>
       <div className="chat-header-actions">
+        <button
+          type="button"
+          className="icon-btn theme-toggle"
+          onClick={onToggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        >
+          {theme === 'dark' ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />}
+        </button>
         <StatusBadge status={status} onRefresh={onRefreshStatus} />
         <button
           type="button"

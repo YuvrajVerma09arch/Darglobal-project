@@ -15,6 +15,13 @@ export default function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [access, setAccess] = useState({ ready: false, required: false, unlocked: false });
   const [stats, setStats] = useState(null);
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem('re_ai_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch { /* storage disabled */ }
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     let alive = true;
@@ -30,6 +37,11 @@ export default function App() {
       });
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('re_ai_theme', theme); } catch { /* storage disabled */ }
+  }, [theme]);
 
   useEffect(() => {
     if (!access.unlocked) return undefined;
@@ -81,6 +93,8 @@ export default function App() {
           onClear={clearChat}
           onOpenMenu={() => setSidebarOpen(true)}
           onRefreshStatus={() => chat.checkHealth()}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
         />
 
         <ErrorBanner

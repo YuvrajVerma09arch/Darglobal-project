@@ -94,6 +94,16 @@ ran 19 exploit attempts (admin auth incl. non-ASCII key, CORS reflection, SQLi,
 path traversal, XFF spoofing, oversized input, invalid enums, prompt injection,
 conversation takeover, SSE contract) — **19/19 passed**.
 
+### Dark mode and unsupported-question handling
+- Theme toggle verified in-browser: light → dark → persisted; screenshot at
+  `docs/screenshots/05-dark-mode-desktop.png`. Implemented purely with CSS
+  token overrides under `[data-theme='dark']`.
+- "Where should I invest for a great return?" now returns a refusal to advise on
+  returns plus a live inventory of the corpus (record counts by source, top
+  cities/types, priced-record count) and grounded example prompts. No fabricated
+  return or investment claim. Screenshot at `docs/screenshots/06-dark-mode-answer.png`.
+- 46 tests pass including advice-regex detection.
+
 ### Filter reliability, plain-text output and conversation history
 - Filter dropdowns are now populated from `/api/v1/stats` (real cities, property
   types, bedroom values and max price) instead of hardcoded guesses.
