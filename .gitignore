@@ -44,3 +44,5 @@ postgres_data/
 frontend/public/archive/
 frontend/public/security-canaries/
 docs/PROMPT_INJECTION_TESTPLAN.md
+PERF.md
+AGENT_HANDOFF.md
