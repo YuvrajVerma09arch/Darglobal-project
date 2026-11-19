@@ -71,6 +71,13 @@ async def test_user_chosen_conversation_id_is_replaced():
     assert not _OPAQUE_CONVERSATION_ID.fullmatch("smoke-test-001")
 
 
+def test_advice_question_is_detected():
+    from app.services.rag import _ADVICE_RE
+
+    assert _ADVICE_RE.search("where should I invest for the best return in future")
+    assert not _ADVICE_RE.search("show me apartments in Riyadh")
+
+
 async def test_unknown_question_returns_no_evidence_answer(monkeypatch):
     async def fake_retrieve(*args, **kwargs):
         return [], "general", {}, None

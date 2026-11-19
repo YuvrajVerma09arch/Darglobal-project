@@ -10,12 +10,12 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import Conversation
+from app.models import Conversation, Property
 from app.prompts.system import SYSTEM_PROMPT, build_context, build_messages
 from app.schemas import ChatRequest, ChatResponse, Citation, SourceFilter
 from app.services.embeddings import embedding_service
@@ -30,7 +30,83 @@ NO_EVIDENCE_ANSWER = (
     "I can help with projects, locations, property types, prices, and amenities "
     "that appear in the collected sources."
 )
+_ADVICE_RE = re.compile(
+    r"\b(invest|investment|return|returns|roi|yield|profit|appreciat\w*|"
+    r"should\s+i\s+buy|best\s+(?:area|district|city)\s+to\s+buy|future\s+value)\b",
+    re.I,
+)
 _CITATION_MARKER = re.compile(r"\[(\d+)\]")
+
+
+def _top_counts(rows: list[tuple[object, object]], limit: int = 4) -> str:
+    parts = [f"{str(name)} ({int(count)})" for name, count in rows[:limit] if name]
+    return ", ".join(parts) if parts else "none indexed"
+
+
+async def corpus_summary(session: AsyncSession) -> str:
+    """A short, factual inventory of what the knowledge base actually contains."""
+    by_source = (
+        (await session.execute(select(Property.source, func.count(Property.id)).group_by(Property.source)))
+        .all()
+    )
+    by_city = (
+        (
+            await session.execute(
+                select(Property.city, func.count(Property.id))
+                .where(Property.city.is_not(None))
+                .group_by(Property.city)
+                .order_by(func.count(Property.id).desc())
+            )
+        ).all()
+    )
+    by_type = (
+        (
+            await session.execute(
+                select(Property.property_type, func.count(Property.id))
+                .where(Property.property_type.is_not(None))
+                .group_by(Property.property_type)
+                .order_by(func.count(Property.id).desc())
+            )
+        ).all()
+    )
+    priced = await session.scalar(
+        select(func.count(Property.id)).where(Property.price.is_not(None))
+    )
+    total = await session.scalar(select(func.count(Property.id)))
+    source_text = _top_counts(by_source)
+    city_text = _top_counts(by_city)
+    type_text = _top_counts(by_type)
+    return (
+        f"The snapshot holds {int(total or 0)} attributable records by source: {source_text}. "
+        f"Best-represented locations: {city_text}. "
+        f"Property types include: {type_text}. "
+        f"Only {int(priced or 0)} records have a listed price; DarGlobal development pages "
+        "disclose no prices, and Wasalt daily rentals had no price rendered."
+    )
+
+
+async def no_evidence_answer(session: AsyncSession | None, question: str) -> str:
+    """Explain the gap honestly, then point to what the data *can* answer."""
+    if session is None:
+        return NO_EVIDENCE_ANSWER
+    summary = await corpus_summary(session)
+    if _ADVICE_RE.search(question):
+        lead = (
+            "I don't have that information in the available DarGlobal/Wasalt data, "
+            "and I won't guess about investment returns or tell you where to buy — "
+            "the dataset contains no yield, appreciation or return figures."
+        )
+    else:
+        lead = (
+            "I don't have that information in the available DarGlobal/Wasalt data, "
+            "and no retrieved record matched this question."
+        )
+    return (
+        f"{lead}\n\n{summary}\n\n"
+        "You can ask me things like: 'Find 3-bedroom apartments in Riyadh under 2 million SAR', "
+        "'What amenities does Neptune offer?', or 'Compare villas in Riyadh'. "
+        "The data reflects the last successful scrape, not live availability."
+    )
 # Only accept opaque server-generated IDs. Rejecting user-chosen IDs prevents a
 # guessed/shared value from reading or overwriting another conversation.
 _OPAQUE_CONVERSATION_ID = re.compile(r"^[0-9a-f]{20}$")
@@ -140,7 +216,7 @@ class RAGService:
             warnings.append("filters_relaxed")
 
         if not citations:
-            answer = NO_EVIDENCE_ANSWER
+            answer = await no_evidence_answer(session, request.message)
             warnings.append("no_retrieved_evidence")
         elif not settings.is_llm_configured:
             answer = (
@@ -194,7 +270,7 @@ class RAGService:
                     warnings.append("filters_relaxed")
 
                 if not citations:
-                    answer = NO_EVIDENCE_ANSWER
+                    answer = await no_evidence_answer(session, request.message)
                     warnings.append("no_retrieved_evidence")
                 elif not settings.is_llm_configured:
                     answer = (
