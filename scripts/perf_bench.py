@@ -91,41 +91,72 @@ def add_phases(store: dict[str, list[float]], header: str) -> None:
         store.setdefault(name, []).append(ms)
 
 
+def timed_request(client: httpx.Client, method: str, url: str, **kwargs) -> tuple[httpx.Response, float]:
+    """Retry transient transport errors (Render cold starts); time only the success."""
+    for attempt in range(4):
+        t0 = time.perf_counter()
+        try:
+            response = client.request(method, url, **kwargs)
+            return response, time.perf_counter() - t0
+        except httpx.TransportError:
+            if attempt == 3:
+                raise
+            time.sleep(1.0)
+
+
+def timed_stream(client: httpx.Client, url: str, **kwargs) -> tuple[float, float, str]:
+    """Same retry policy for SSE; returns (TTFB, total, body) of the success."""
+    for attempt in range(4):
+        t0 = time.perf_counter()
+        ttfb: float | None = None
+        body = ""
+        try:
+            with client.stream("POST", url, **kwargs) as response:
+                for chunk in response.iter_bytes():
+                    if ttfb is None:
+                        ttfb = time.perf_counter() - t0
+                    body += chunk.decode("utf-8", errors="replace")
+            return ttfb or 0.0, time.perf_counter() - t0, body
+        except httpx.TransportError:
+            if attempt == 3:
+                raise
+            time.sleep(1.0)
+
+
 def main() -> None:
     base = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     headers = {"X-Access-Code": access_code()}
     results = []
     with httpx.Client(base_url=base, timeout=120.0, headers=headers) as client:
         # warm-up (JIT/pool/connection reuse)
-        client.get("/health")
-        client.post("/api/v1/search", json={"query": "apartment in Riyadh", "top_k": 5})
+        timed_request(client, "GET", "/health")
+        timed_request(client, "POST", "/api/v1/search",
+                      json={"query": "apartment in Riyadh", "top_k": 5})
 
         health_samples: list[float] = []
         health_phases: dict[str, list[float]] = {}
         for _ in range(PROPS):
-            t0 = time.perf_counter()
-            resp = client.get("/health")
-            health_samples.append(time.perf_counter() - t0)
+            resp, elapsed = timed_request(client, "GET", "/health")
+            health_samples.append(elapsed)
             add_phases(health_phases, resp.headers.get("server-timing", ""))
         results.append(summarize("GET /health", health_samples, health_phases))
 
         props_samples: list[float] = []
         props_phases: dict[str, list[float]] = {}
         for _ in range(PROPS):
-            t0 = time.perf_counter()
-            resp = client.get("/api/v1/properties")
-            props_samples.append(time.perf_counter() - t0)
+            resp, elapsed = timed_request(client, "GET", "/api/v1/properties")
+            props_samples.append(elapsed)
             add_phases(props_phases, resp.headers.get("server-timing", ""))
         results.append(summarize("GET /api/v1/properties", props_samples, props_phases))
 
         search_samples: list[float] = []
         search_phases: dict[str, list[float]] = {}
         for _ in range(SEARCH):
-            t0 = time.perf_counter()
-            resp = client.post(
-                "/api/v1/search", json={"query": "waterfront villa Jeddah", "top_k": 8}
+            resp, elapsed = timed_request(
+                client, "POST", "/api/v1/search",
+                json={"query": "waterfront villa Jeddah", "top_k": 8},
             )
-            search_samples.append(time.perf_counter() - t0)
+            search_samples.append(elapsed)
             add_phases(search_phases, resp.headers.get("server-timing", ""))
         results.append(
             summarize("POST /api/v1/search (embed+retrieve)", search_samples, search_phases)
@@ -134,32 +165,23 @@ def main() -> None:
         chat_samples: list[float] = []
         chat_phases: dict[str, list[float]] = {}
         for _ in range(CHAT):
-            t0 = time.perf_counter()
-            resp = client.post(
-                "/api/v1/chat",
+            resp, elapsed = timed_request(
+                client, "POST", "/api/v1/chat",
                 json={"message": "What waterfront villas do you have in Jeddah?"},
             )
-            chat_samples.append(time.perf_counter() - t0)
+            chat_samples.append(elapsed)
             add_phases(chat_phases, resp.headers.get("server-timing", ""))
         results.append(summarize("POST /api/v1/chat (full LLM)", chat_samples, chat_phases))
 
         stream_total, stream_ttfb = [], []
         stream_phases: dict[str, list[float]] = {}
         for _ in range(STREAM):
-            t0 = time.perf_counter()
-            ttfb = None
-            body = ""
-            with client.stream(
-                "POST",
-                "/api/v1/chat",
+            ttfb, total, body = timed_stream(
+                client, "/api/v1/chat",
                 json={"message": "List available compounds in Riyadh", "stream": True},
-            ) as resp:
-                for chunk in resp.iter_bytes():
-                    if ttfb is None:
-                        ttfb = time.perf_counter() - t0
-                    body += chunk.decode("utf-8", errors="replace")
-            stream_ttfb.append(ttfb or 0.0)
-            stream_total.append(time.perf_counter() - t0)
+            )
+            stream_ttfb.append(ttfb)
+            stream_total.append(total)
             match = TIMING_RE.search(body)
             if match:
                 for name, ms in json.loads(match.group(1)).items():

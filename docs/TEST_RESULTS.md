@@ -155,6 +155,12 @@ conversation takeover, SSE contract) — **19/19 passed**.
 - Live Render p95 failures (health 376, properties 446, search 2312) attributed to
   free-tier platform/cold-start noise, not app code: the same 3-DB-roundtrip
   health check takes 3–10 ms in Docker. No retrieval or model behavior changed.
+- Final live run after manual redeploy confirmed it with phase timings: `/health`
+  322 ms wall but only 10 ms in `db`; `/properties` 320 ms wall / 10 ms `db`;
+  `/search` 1183 ms of measured app phases (embed 385 + retrieve 699) inside its
+  1500 ms budget; chat dominated by the external LLM (1703 ms). A ~310 ms Render
+  platform floor explains the wall-clock budget failures. Bench now retries
+  transient transport resets; see `PERF.md` (local-only) for the full log.
 
 Additional final verification after hardening:
 - `docker compose up --build` — all three images built, db/backend healthy,
