@@ -11,8 +11,8 @@ continue from the "Current state" section. Update it whenever a milestone is com
 | LLM provider | OpenRouter is the configured default; abstraction supports OpenAI / Gemini / Anthropic / any OpenAI-compatible endpoint / local |
 | Embeddings | Local `fastembed` BGE-small (no key needed) so ingestion works before credentials exist; `openai` selectable via env |
 | Deployment | Render, deployed manually by the user from `render.yaml` (no Render credentials shared) |
-| Git | Local commits only, at each milestone. No remote. |
-| Docker | Not installed on this machine yet; user will install later. Write + validate config statically; cannot run `docker compose` here. |
+| Git | Local commits at each milestone, pushed to `origin/main`. |
+| Docker | Docker Desktop installed and running; `docker compose` works (CLI is on `PATH`). |
 
 ## Engineering principles for this build
 
@@ -34,7 +34,7 @@ All agents MUST read it before writing code. Do not change it without telling th
 - Subagent INFRA: `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf`, `render.yaml`, `scripts/**`, `docs/DEPLOYMENT.md`
 - Subagent RESEARCH: read-only website investigation (no files)
 
-## Current state (final build handoff, updated 2026-11-18 after Docker + pentest)
+## Current state (updated 2026-11-19 after performance pass)
 
 - [x] Requirements clarified with user (OpenRouter default, Render backend + Vercel frontend, local git, no third-party bypass)
 - [x] Repo at `~/Projects/darglobal-wasalt-ai`, local commits at each milestone
@@ -57,7 +57,11 @@ All agents MUST read it before writing code. Do not change it without telling th
 - [x] Docker images rebuilt locally after final changes; Render backend + Vercel frontend deployed externally by user.
 - [x] Logo mark fixed (flex layout keeps D×W inside the 38px box); status chip now rechecks health; added working "Clear filters" button
 - [x] Documentation: README, architecture, API contract, data report, access notes, Render+Vercel deployment guide, QA results, screenshots
-- [ ] **Deployment: user action** — user connects GitHub and deploys backend on Render, frontend on Vercel using `render.yaml` / `vercel.json`. Set `VITE_API_BASE_URL` in Vercel and `ALLOWED_ORIGINS` in Render to the real Vercel URL, set `LLM_API_KEY`, run `/api/v1/admin/ingest`, then smoke-test externally.
+- [x] Performance pass (measure-first): `PhaseTimer` instrumentation (`Server-Timing` + SSE `timing` frame), `scripts/perf_bench.py` with p50/p95 + phase attribution and budget gate, `PERF.md` baseline/attempts/conclusion, `backend/tests/test_observability.py` (6 guard tests).
+- [x] Fixed missing `PhaseTimer` import in `routers/properties.py` (caused 500 on `/properties`); guard test added.
+- [x] Tests: **53 passed, 1 skipped**. Docker stack rebuilt and running (backend/frontend/db all healthy), warm local bench passes every budget.
+- [x] Attribution conclusion: live Render budget failures (health 376 ms, properties 446 ms p95) are platform/cold-start noise — same code serves health/properties in 3–10 ms next to Postgres. Search is embed+DB bound (~300 ms warm), chat is LLM bound (~2.4 s of ~2.8 s). No risky retrieval/model changes made.
+- [ ] **Deployment: user action** — live Render backend is running an older build (instrumentation not yet redeployed). User action needed: Render "Manual Deploy → Clear build cache & deploy", then re-run the live bench with `APP_ACCESS_CODE` for phase attribution. Frontend Vercel deploy already live.
 
 ## Commit log
 
@@ -67,7 +71,7 @@ All agents MUST read it before writing code. Do not change it without telling th
 
 ## Notes / gotchas for the next agent
 
-- Docker CLI is not on `PATH`; use `./scripts/docker compose ...`.
+- Docker CLI is on `PATH` now; use `docker compose ...` from the repo root. If Docker Desktop is closed, `open -a Docker` first.
 - `LLM_API_KEY` is now configured locally and verified with OpenRouter; set it in Render for the public deployment.
 - Render + Vercel split: `VITE_API_BASE_URL` must be set in Vercel; Render `ALLOWED_ORIGINS` must match the Vercel URL exactly.
 - If Render managed Postgres lacks pgvector, use an external pgvector DB (e.g. Neon) and set `DATABASE_URL` to `postgresql+asyncpg://...`.

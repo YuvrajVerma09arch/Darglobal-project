@@ -6,6 +6,7 @@ import json
 import logging
 import random
 import re
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -16,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Conversation, Property
+from app.observability import PhaseTimer
 from app.prompts.system import SYSTEM_PROMPT, build_context, build_messages
 from app.schemas import ChatRequest, ChatResponse, Citation, SourceFilter
 from app.services.embeddings import embedding_service
@@ -152,8 +154,13 @@ class RAGService:
         message: str,
         source_filter: SourceFilter,
         explicit_filters: Any,
+        timer: PhaseTimer | None = None,
     ) -> tuple[list[RetrievedItem], str, dict[str, Any], str | None]:
-        vector = await embedding_service.embed_query(message)
+        if timer is not None:
+            with timer.phase("embed"):
+                vector = await embedding_service.embed_query(message)
+        else:
+            vector = await embedding_service.embed_query(message)
         return await self.retriever.search(
             session,
             query=message,
@@ -205,18 +212,27 @@ class RAGService:
         stamps = [item.scraped_at for item in items if item.scraped_at is not None]
         return max(stamps) if stamps else None
 
-    async def chat(self, session: AsyncSession, request: ChatRequest) -> ChatResponse:
-        items, query_type, applied, relaxation_note = await self._retrieve(
-            session, request.message, request.source_filter, request.filters
-        )
-        conversation_id, history = await self._history(session, request.conversation_id)
+    async def chat(
+        self,
+        session: AsyncSession,
+        request: ChatRequest,
+        timer: PhaseTimer | None = None,
+    ) -> ChatResponse:
+        timer = timer or PhaseTimer()
+        with timer.phase("retrieve"):
+            items, query_type, applied, relaxation_note = await self._retrieve(
+                session, request.message, request.source_filter, request.filters, timer=timer
+            )
+        with timer.phase("history"):
+            conversation_id, history = await self._history(session, request.conversation_id)
         citations = [item.as_citation() for item in items]
         warnings: list[str] = []
         if relaxation_note:
             warnings.append("filters_relaxed")
 
         if not citations:
-            answer = await no_evidence_answer(session, request.message)
+            with timer.phase("no_evidence"):
+                answer = await no_evidence_answer(session, request.message)
             warnings.append("no_retrieved_evidence")
         elif not settings.is_llm_configured:
             answer = (
@@ -233,15 +249,17 @@ class RAGService:
                     + context
                 )
             messages = build_messages(SYSTEM_PROMPT, history, request.message, context)
-            try:
-                answer = await llm_client.acomplete(messages)
-            except LLMUnavailableError:
-                answer = "The language model is temporarily unavailable. Please try again."
-                warnings.append("llm_unavailable")
+            with timer.phase("llm"):
+                try:
+                    answer = await llm_client.acomplete(messages)
+                except LLMUnavailableError:
+                    answer = "The language model is temporarily unavailable. Please try again."
+                    warnings.append("llm_unavailable")
 
         answer, extra_warnings = validate_answer(answer, len(citations))
         warnings.extend(extra_warnings)
-        await self._persist(session, conversation_id, history, request.message, answer)
+        with timer.phase("persist"):
+            await self._persist(session, conversation_id, history, request.message, answer)
 
         return ChatResponse(
             answer=answer,
@@ -258,19 +276,23 @@ class RAGService:
 
     async def stream(self, request: ChatRequest):
         """Async generator yielding SSE frames. Opens its own DB session."""
+        timer = PhaseTimer()
         async with SessionLocal() as session:
             try:
-                items, query_type, applied, relaxation_note = await self._retrieve(
-                    session, request.message, request.source_filter, request.filters
-                )
-                conversation_id, history = await self._history(session, request.conversation_id)
+                with timer.phase("retrieve"):
+                    items, query_type, applied, relaxation_note = await self._retrieve(
+                        session, request.message, request.source_filter, request.filters, timer=timer
+                    )
+                with timer.phase("history"):
+                    conversation_id, history = await self._history(session, request.conversation_id)
                 citations = [item.as_citation() for item in items]
                 warnings: list[str] = []
                 if relaxation_note:
                     warnings.append("filters_relaxed")
 
                 if not citations:
-                    answer = await no_evidence_answer(session, request.message)
+                    with timer.phase("no_evidence"):
+                        answer = await no_evidence_answer(session, request.message)
                     warnings.append("no_retrieved_evidence")
                 elif not settings.is_llm_configured:
                     answer = (
@@ -284,8 +306,15 @@ class RAGService:
                     messages = build_messages(SYSTEM_PROMPT, history, request.message, context)
                     raw_answer = ""
                     safe_answer = ""
+                    # llm_ttfb spans from loop start to the first token and is
+                    # recorded (not phase()-wrapped) because yields happen inside.
+                    llm_start = time.perf_counter()
+                    first_token = True
                     try:
                         async for token in llm_client.astream(messages):
+                            if first_token:
+                                timer.record("llm_ttfb", (time.perf_counter() - llm_start) * 1000)
+                                first_token = False
                             raw_answer += token
                             cleaned, _ = validate_answer(raw_answer, len(citations))
                             # Only stream text that is still a valid prefix of the
@@ -301,10 +330,12 @@ class RAGService:
                         answer = "The language model is temporarily unavailable. Please try again."
                         warnings.append("llm_unavailable")
                         yield self._frame("token", {"text": answer})
+                    timer.record("llm_total", (time.perf_counter() - llm_start) * 1000)
 
                 answer, extra_warnings = validate_answer(answer, len(citations))
                 warnings.extend(extra_warnings)
-                await self._persist(session, conversation_id, history, request.message, answer)
+                with timer.phase("persist"):
+                    await self._persist(session, conversation_id, history, request.message, answer)
 
                 response = ChatResponse(
                     answer=answer,
@@ -318,6 +349,9 @@ class RAGService:
                     model=settings.llm_model,
                     warnings=warnings,
                 )
+                # Unknown SSE events are ignored by the client; this frame is
+                # the streaming counterpart of the Server-Timing header.
+                yield self._frame("timing", timer.frame_data())
                 yield self._frame("done", response.model_dump(mode="json"))
             except Exception as exc:
                 logger.exception("stream_chat_failed", extra={"error": str(exc)[:200]})

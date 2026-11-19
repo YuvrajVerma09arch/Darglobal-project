@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.deps import require_access_code
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.models import Property
+from app.observability import PhaseTimer
 from app.schemas import PropertyFilters, PropertyListResponse, PropertyOut, SourceFilter
 from app.services.retrieval import HybridRetriever
 
@@ -43,6 +44,7 @@ def to_out(row: Property) -> PropertyOut:
 
 @router.get("", response_model=PropertyListResponse)
 async def list_properties(
+    response: Response,
     source: SourceFilter = "both",
     location: str | None = None,
     city: str | None = None,
@@ -64,9 +66,12 @@ async def list_properties(
         max_price=max_price,
         bedrooms=bedrooms,
     )
-    rows, total = await retriever.search_without_vector(
-        session, source, filters, limit=limit, offset=offset
-    )
+    timer = PhaseTimer()
+    with timer.phase("db"):
+        rows, total = await retriever.search_without_vector(
+            session, source, filters, limit=limit, offset=offset
+        )
+    response.headers["Server-Timing"] = timer.header()
     return PropertyListResponse(
         items=[to_out(row) for row in rows], total=total, limit=limit, offset=offset
     )

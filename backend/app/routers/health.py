@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,17 +12,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import __version__
 from app.db import get_db
 from app.models import Chunk, IngestionRun
+from app.observability import PhaseTimer
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["health"])
 
 
 @router.api_route("/health", methods=["GET", "HEAD"])
-async def health(session: AsyncSession = Depends(get_db)):
+async def health(response: Response, session: AsyncSession = Depends(get_db)):
+    timer = PhaseTimer()
     try:
-        await session.execute(text("SELECT 1"))
-        chunks = await session.scalar(select(func.count()).select_from(Chunk))
-        last = await session.scalar(select(func.max(IngestionRun.finished_at)))
+        with timer.phase("db"):
+            await session.execute(text("SELECT 1"))
+            chunks = await session.scalar(select(func.count()).select_from(Chunk))
+            last = await session.scalar(select(func.max(IngestionRun.finished_at)))
+        response.headers["Server-Timing"] = timer.header()
         return {
             "status": "ok",
             "version": __version__,

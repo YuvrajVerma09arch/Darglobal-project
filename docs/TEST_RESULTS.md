@@ -140,6 +140,22 @@ conversation takeover, SSE contract) — **19/19 passed**.
   `model_not_found`; the default was changed to a model the account exposes.
 - Offline unit tests cover provider-chain construction and fallback-on-failure.
 
+### Performance pass (2026-11-19)
+- Instrumentation: `PhaseTimer` emits `Server-Timing` on `/health`, `/properties`,
+  `/search`, non-stream `/chat`, and an SSE `timing` frame before `done` on streamed
+  chat. `scripts/perf_bench.py` collects p50/p95 and per-phase percentiles and
+  exits 1 on budget breach. Guard: `backend/tests/test_observability.py` (6 tests).
+- Caught and fixed a real defect during live verification: `routers/properties.py`
+  called `PhaseTimer()` without importing it, returning 500 on `/properties`.
+  A regression test now exercises that route directly.
+- Full suite: **53 passed, 1 skipped**. Frontend build and Docker stack healthy.
+- Docker bench (app next to pgvector DB): health p50 3–4 ms, properties 4 ms,
+  search 308–425 ms (embed 137–276 + retrieve 192–199), chat 2.8 s of which the
+  LLM is ~2.4 s, stream TTFB ~1.4 s. Warm run passes every budget; see `PERF.md`.
+- Live Render p95 failures (health 376, properties 446, search 2312) attributed to
+  free-tier platform/cold-start noise, not app code: the same 3-DB-roundtrip
+  health check takes 3–10 ms in Docker. No retrieval or model behavior changed.
+
 Additional final verification after hardening:
 - `docker compose up --build` — all three images built, db/backend healthy,
   frontend container initially failed on nginx temp/pid paths and was fixed
