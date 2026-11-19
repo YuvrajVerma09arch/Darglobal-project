@@ -2,7 +2,7 @@
 
 from app.prompts.system import SYSTEM_PROMPT, build_context, build_messages
 from app.schemas import ChatRequest, Citation
-from app.services.rag import NO_EVIDENCE_ANSWER, validate_answer, rag_service
+from app.services.rag import validate_answer, rag_service
 
 
 def make_citation(source: str = "wasalt", index: int = 1) -> Citation:
@@ -94,6 +94,8 @@ async def test_no_evidence_answer_detects_advice_and_includes_summary(monkeypatc
 
 
 async def test_unknown_question_returns_no_evidence_answer(monkeypatch):
+    from app.services import rag
+
     async def fake_retrieve(*args, **kwargs):
         return [], "general", {}, None
 
@@ -103,11 +105,16 @@ async def test_unknown_question_returns_no_evidence_answer(monkeypatch):
     async def fake_persist(*args, **kwargs):
         return None
 
+    async def fake_summary(session):
+        return "57 records; Riyadh (24)."
+
     monkeypatch.setattr(rag_service, "_retrieve", fake_retrieve)
     monkeypatch.setattr(rag_service, "_history", fake_history)
     monkeypatch.setattr(rag_service, "_persist", fake_persist)
+    monkeypatch.setattr(rag, "corpus_summary", fake_summary)
 
-    response = await rag_service.chat(None, ChatRequest(message="What is the weather in Paris?"))
-    assert response.answer == NO_EVIDENCE_ANSWER
+    response = await rag_service.chat(object(), ChatRequest(message="What is the weather in Paris?"))
+    assert "no retrieved record matched this question" in response.answer
+    assert "57 records; Riyadh (24)." in response.answer
     assert response.citations == []
     assert "no_retrieved_evidence" in response.warnings

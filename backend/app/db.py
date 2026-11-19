@@ -8,7 +8,6 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
 from app.models import Base

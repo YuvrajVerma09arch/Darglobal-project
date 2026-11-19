@@ -27,11 +27,6 @@ from app.services.retrieval import HybridRetriever, RetrievedItem
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-NO_EVIDENCE_ANSWER = (
-    "I don't have that information in the available DarGlobal/Wasalt data. "
-    "I can help with projects, locations, property types, prices, and amenities "
-    "that appear in the collected sources."
-)
 _ADVICE_RE = re.compile(
     r"\b(invest|investment|return|returns|roi|yield|profit|appreciat\w*|"
     r"should\s+i\s+buy|best\s+(?:area|district|city)\s+to\s+buy|future\s+value)\b",
@@ -87,10 +82,8 @@ async def corpus_summary(session: AsyncSession) -> str:
     )
 
 
-async def no_evidence_answer(session: AsyncSession | None, question: str) -> str:
+async def no_evidence_answer(session: AsyncSession, question: str) -> str:
     """Explain the gap honestly, then point to what the data *can* answer."""
-    if session is None:
-        return NO_EVIDENCE_ANSWER
     summary = await corpus_summary(session)
     if _ADVICE_RE.search(question):
         lead = (
