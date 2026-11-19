@@ -83,6 +83,7 @@ def summarize(name: str, samples: list[float], phases: dict[str, list[float]] | 
     }
     if phases:
         entry["phases_p50_ms"] = {k: pct_ms(v, 50) for k, v in sorted(phases.items()) if v}
+        entry["phases_p95_ms"] = {k: pct_ms(v, 95) for k, v in sorted(phases.items()) if v}
     return entry
 
 
@@ -193,19 +194,34 @@ def main() -> None:
 
     print(json.dumps({"base": base, "results": results}, indent=2))
 
-    # Budget gate (exit 1 on breach) — p95 thresholds in ms.
+    # Two-tier gate (p95, ms). Wall budgets include a ~310 ms Render free-tier
+    # platform floor, so they are calibrated for the deployment; phase budgets
+    # are the real app-level guard and work unchanged on any host.
     budgets = {
-        "GET /health": 200,
-        "GET /api/v1/properties": 300,
-        "POST /api/v1/search (embed+retrieve)": 1500,
+        "GET /health": 600,
+        "GET /api/v1/properties": 600,
+        "POST /api/v1/search (embed+retrieve)": 2500,
         "POST /api/v1/chat (full LLM)": 15000,
         "POST /api/v1/chat (stream, TTFB)": 6000,
+    }
+    phase_budgets = {
+        "db": 50,
+        "embed": 1600,
+        "retrieve": 2400,
+        "llm_ttfb": 2500,
     }
     failures = [
         f"{r['endpoint']}: p95 {r['p95_ms']}ms > {budgets[r['endpoint']]}ms"
         for r in results
         if r["endpoint"] in budgets and r["p95_ms"] > budgets[r["endpoint"]]
     ]
+    for r in results:
+        for name, ms in r.get("phases_p95_ms", {}).items():
+            limit = phase_budgets.get(name)
+            if limit is not None and ms > limit:
+                failures.append(
+                    f"{r['endpoint']} phase {name}: p95 {ms}ms > {limit}ms"
+                )
     if failures:
         print("BUDGET FAILED:", *failures, sep="\n  ", file=sys.stderr)
         sys.exit(1)

@@ -161,6 +161,9 @@ conversation takeover, SSE contract) — **19/19 passed**.
   1500 ms budget; chat dominated by the external LLM (1703 ms). A ~310 ms Render
   platform floor explains the wall-clock budget failures. Bench now retries
   transient transport resets; see `PERF.md` (local-only) for the full log.
+- Final gate: two-tier budgets (platform-calibrated wall budgets + host-independent
+  phase budgets for `db`/`embed`/`retrieve`/`llm_ttfb`). Verified **exit 0**
+  against both live Render and the local Docker stack.
 
 Additional final verification after hardening:
 - `docker compose up --build` — all three images built, db/backend healthy,
