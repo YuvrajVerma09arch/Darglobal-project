@@ -78,6 +78,21 @@ def test_advice_question_is_detected():
     assert not _ADVICE_RE.search("show me apartments in Riyadh")
 
 
+async def test_no_evidence_answer_detects_advice_and_includes_summary(monkeypatch):
+    from app.services import rag
+
+    async def fake_summary(session):
+        return "57 records; Riyadh (24)."
+
+    monkeypatch.setattr(rag, "corpus_summary", fake_summary)
+    advice = await rag.no_evidence_answer(object(), "where should I invest for the best return")
+    unknown = await rag.no_evidence_answer(object(), "what is the weather in Paris")
+
+    assert "won't guess about investment returns" in advice
+    assert "won't guess about investment returns" not in unknown
+    assert "57 records" in advice and "57 records" in unknown
+
+
 async def test_unknown_question_returns_no_evidence_answer(monkeypatch):
     async def fake_retrieve(*args, **kwargs):
         return [], "general", {}, None

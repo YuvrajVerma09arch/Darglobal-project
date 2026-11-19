@@ -72,6 +72,7 @@ def test_live_hybrid_pipeline():
             )
             assert unsupported.citations == []
             assert "don't have that information" in unsupported.answer
+            assert "attributable records by source" in unsupported.answer
 
             grounded = await rag_service.chat(
                 session, ChatRequest(message="Show me apartments in Riyadh")
